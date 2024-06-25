@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ## #ddev-generated
-## Description: Install ddev-playwrright
-## Usage: ddev-playwright-install
+## Description: Install the deviantintegral/ddev-playwright addon and does some basic onex config.
+## Usage: 1x-playwright-install
 
 start=`date +%s`
 
