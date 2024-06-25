@@ -1,0 +1,8 @@
+#!/bin/bash
+
+## Description: Build granite
+## Usage: granite 1x-granite
+## Example: "ddev 1x-granite [dev]"
+
+cd "${DDEV_APPROOT}/${DDEV_DOCROOT}/themes/custom/granite"
+./build.sh "$@"

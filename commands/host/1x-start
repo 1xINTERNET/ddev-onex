@@ -1,12 +1,14 @@
 #!/bin/bash
 #ddev-generated
+## Description: Starts the ddev project, runs auth and makes sure the .gitconfig is present.
+## Usage: 1x-start
 if [ ! -f $DDEV_APPROOT/.ddev/homeadditions/.gitconfig ]
 then
     if [  -f ~/.gitconfig ]
-      then
-        echo ".gitconfig does not exist in homeadditions - symlinking your local ~/.gitconfig"
-        ln -s ~/.gitconfig ${DDEV_APPROOT}/.ddev/homeadditions/.gitconfig
-      fi
+    then
+      echo ".gitconfig does not exist in homeadditions - symlinking your local ~/.gitconfig"
+      ln -s ~/.gitconfig ${DDEV_APPROOT}/.ddev/homeadditions/.gitconfig
+    fi
 fi
 
 ddev start

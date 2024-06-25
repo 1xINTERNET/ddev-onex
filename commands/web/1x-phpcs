@@ -1,0 +1,8 @@
+#!/bin/bash
+
+## Description: Run phpcs within the web container
+## Usage: granite 1x-phpcs
+## Example: "ddev 1x-phpcs --basepath=. --colors ./web/modules/contrib/crop/"
+
+cd "${DDEV_APPROOT}"
+vendor/bin/phpcs "$@"

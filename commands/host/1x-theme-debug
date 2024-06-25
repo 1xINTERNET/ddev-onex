@@ -1,0 +1,99 @@
+#!/bin/bash
+
+## Description: manage php config options
+## Usage: 1x-theme-debug
+## Example: "ddev 1x-theme-debug (enable|disable)"
+
+settings_dir="${DDEV_APPROOT}/${DDEV_DOCROOT}/sites/default"
+settings_local="settings.local.php"
+debug_services="services.theme_debug.yml"
+debug_settings="settings.theme-debug.php"
+
+read -r -d '' debug_services_yml << 'EOF_SERVICES'
+parameters:
+  session.storage.options:
+    cookie_lifetime: 0
+  http.response.debug_cacheability_headers: true
+  twig.config:
+    debug: true
+    auto_reload: true
+    cache: false
+services:
+  cache.backend.null:
+    class: Drupal\Core\Cache\NullBackendFactory
+EOF_SERVICES
+
+read -r -d '' debug_settings_php << 'EOF_SETTINGS'
+<?php
+$settings['container_yamls'][] = $app_root . '/sites/default/services.theme_debug.yml';
+
+$config['system.performance']['css']['preprocess'] = FALSE;
+$config['system.performance']['js']['preprocess'] = FALSE;
+
+// Disable the render and dynamic page caches.
+$settings['cache']['bins']['render'] = 'cache.backend.null';
+$settings['cache']['bins']['dynamic_page_cache'] = 'cache.backend.null';
+$settings['cache']['bins']['page'] = 'cache.backend.null';
+EOF_SETTINGS
+
+read -r -d '' debug_config_php << 'EOF_CONFIG'
+# DDEV THEME DEBUG ACTIVE. DO NOT WRITE ANYTHING BELOW THIS LINE!
+if (file_exists($app_root . '/' . $site_path . '/settings.theme-debug.php')) {
+  include $app_root . '/' . $site_path . '/settings.theme-debug.php';
+}
+EOF_CONFIG
+
+preflight() {
+  if [[ ! -f "${settings_dir}/${settings_local}" ]]; then
+    cp ${settings_dir}/${settings_local}.example ${settings_dir}/${settings_local}
+  fi
+
+  # Delete the config always, so that enabling twice doesn't add it multiple times.
+  if [[ $OSTYPE == darwin* ]]; then
+    sed -i '' '/^#.*DO NOT WRITE ANYTHING BELOW THIS LINE/,$d' "${settings_dir}/${settings_local}"
+  else
+    sed -i '/^#.*DO NOT WRITE ANYTHING BELOW THIS LINE/,$d' "${settings_dir}/${settings_local}"
+  fi
+}
+
+enable_debug() {
+  echo "Creating ${debug_services}"
+  echo "${debug_services_yml}" > "${settings_dir}/${debug_services}"
+
+  echo "Creating ${debug_settings}"
+  echo "${debug_settings_php}" > "${settings_dir}/${debug_settings}"
+
+  # Make sure the file ends with a new line
+  if [[ $OSTYPE == darwin* ]]; then
+    sed -i '' '$a\' "${settings_dir}/${settings_local}"
+  else
+    sed -i '$a\' "${settings_dir}/${settings_local}"
+  fi
+  echo -e "${debug_config_php}" >> "${settings_dir}/${settings_local}"
+}
+
+disable_debug() {
+  echo "Deleting ${debug_services}"
+  rm -f "${settings_dir}/${debug_services}" || true
+
+  echo "Deleting ${debug_settings}"
+  rm -f "${settings_dir}/${debug_settings}" || true
+}
+
+preflight
+
+case "$1" in
+  "enable")
+    enable_debug
+    ;;
+  "disable")
+    disable_debug
+    ;;
+  *)
+    if [ -e "${settings_dir}/${debug_services}" ]; then
+      disable_debug
+    else
+      enable_debug
+    fi
+    ;;
+esac

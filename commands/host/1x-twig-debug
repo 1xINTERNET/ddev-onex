@@ -1,0 +1,58 @@
+#!/bin/bash
+
+## Description: Enables or disables Twig debugging for Drupal 10 installations
+## Usage: 1x-twig-debug
+## Example: "ddev 1x-twig-debug (enable|disable) @self"
+
+enable_debug() {
+  if [ -z $1 ]; then
+    local drush_alias='@self'
+  else
+    local drush_alias="$1"
+  fi
+
+  # Enable Twig debugging in Drupal 10
+  echo "Enabling Twig debugging for $drush_alias ..."
+  ddev drush $drush_alias state:set twig_debug 1 --input-format=integer && \
+  ddev drush $drush_alias state:set twig_cache_disable 1 --input-format=integer && \
+  ddev drush $drush_alias state:set disable_rendered_output_cache_bins 1 --input-format=integer && \
+  ddev drush $drush_alias cache:rebuild
+}
+
+disable_debug() {
+  if [ -z $1 ]; then
+    local drush_alias='@self'
+  else
+    local drush_alias="$1"
+  fi
+
+  # Disable Twig debugging in Drupal 10
+  echo "Disabling Twig debugging for $drush_alias ..."
+  ddev drush $drush_alias state:set twig_debug 0 --input-format=integer && \
+  ddev drush $drush_alias state:set twig_cache_disable 0 --input-format=integer && \
+  ddev drush $drush_alias state:set disable_rendered_output_cache_bins 0 --input-format=integer && \
+  ddev drush $drush_alias cache:rebuild
+}
+
+case "$1" in
+  "enable")
+    enable_debug $2
+    ;;
+  "disable")
+    disable_debug $2
+    ;;
+  *)
+    if [ -z $1 ]; then
+      drush_alias_state='@self'
+    else
+      drush_alias_state="$1"
+    fi
+
+    twig_debug_state=$(ddev drush $drush_alias_state state:get twig_debug)
+    if [ -z $twig_debug_state ] || [ $twig_debug_state -eq 0 ]; then
+      enable_debug $1
+    else
+      disable_debug $1
+    fi
+    ;;
+esac
