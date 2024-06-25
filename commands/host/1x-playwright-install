@@ -1,0 +1,34 @@
+#!/bin/bash
+
+## #ddev-generated
+## Description: Install ddev-playwrright
+## Usage: ddev-playwright-install
+
+start=`date +%s`
+
+# Colors for printing messages.
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+BROWN='\033[0;33m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
+ddev get deviantintegral/ddev-playwright
+ddev restart
+
+ddev exec -d /var/www/html/ mkdir -p test/playwright
+# To install with npx.
+ddev exec -d /var/www/html/test/playwright npx --yes create-playwright@latest --lang=Javascript --quiet
+
+if [! command -v jq &> /dev/null ]; then
+    playwright_error = "jq command not found - you'll need to adjust the test/playwright/playwright.config.ts manually!"
+    echo "${RED}jq command not found - you'll need to adjust the test/playwright/playwright.config.ts manually!"
+else
+    ddev_hostname=`ddev status -j | jq -r '.["raw"]["hostnames"][0]'`
+    # @todo - proper templating
+    pushd test/playwright && sed -i "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+fi
+
+# @todo: Some people want to run playwright outside ddev ...
+ddev install-playwright

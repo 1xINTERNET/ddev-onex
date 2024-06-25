@@ -1,0 +1,14 @@
+#!/bin/bash
+#ddev-generated
+if [ ! -f $DDEV_APPROOT/.ddev/homeadditions/.gitconfig ]
+then
+    if [  -f ~/.gitconfig ]
+      then
+        echo ".gitconfig does not exist in homeadditions - symlinking your local ~/.gitconfig"
+        ln -s ~/.gitconfig ${DDEV_APPROOT}/.ddev/homeadditions/.gitconfig
+      fi
+fi
+
+ddev start
+ddev auth ssh
+
