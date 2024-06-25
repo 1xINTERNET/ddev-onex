@@ -1,5 +1,5 @@
 #!/bin/bash
-
+## #ddev-generated
 ## Description: manage php config options
 ## Usage: 1x-theme-debug
 ## Example: "ddev 1x-theme-debug (enable|disable)"

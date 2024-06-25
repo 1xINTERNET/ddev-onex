@@ -1,5 +1,5 @@
 #!/bin/bash
-
+## #ddev-generated
 ## Description: Build granite
 ## Usage: granite 1x-granite
 ## Example: "ddev 1x-granite [dev]"
