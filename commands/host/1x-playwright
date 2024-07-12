@@ -35,7 +35,7 @@ case "$1" in
   "test")
     ddev playwright test "${@:2}"
     echo "=== PLEASE NOTE: ==="
-    echo "If you were Please ignore the output recommendation above run 'npx ...' - to open the last HTML report run:"
+    echo "If the output above suggest using 'npx playwright show-report' to show your generated reports, please run following command instead to avoid having to provide additional parameters:"
     echo "ddev 1x-playwright show-report"
     ;;
   "show-report")
