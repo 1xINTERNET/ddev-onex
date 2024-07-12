@@ -1,0 +1,57 @@
+#!/bin/bash
+
+## #ddev-generated
+## Description: Run deviantintegral/ddev-playwright commands in a slightly more sane way :)
+## Usage: 1x-playwright test <rest passed to
+## Usage: 1x-playwright show
+
+start=`date +%s`
+
+# Colors for printing messages.
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+BROWN='\033[0;33m'
+NC='\033[0m' # No Color
+
+ddev_hostname () {
+  if [! command -v jq &> /dev/null ]; then
+    echo "${$RED}jq command not found. Cannot determine host name - please adjust url/hostname."
+    echo "HOSTNAME"
+  else
+    echo `ddev status -j | jq -r '.["raw"]["hostnames"][0]'`
+  fi
+}
+
+case "$1" in
+  "ui")
+    host=$(ddev_hostname)
+    playwright_report_url="https://${host}:9324"
+    # Note: playwright "report server" hangs.
+    sleep 1 && open $playwright_report_url & jobs
+    ddev playwright test "${@:2} --ui-host=0.0.0.0 --ui-port=9323"
+    ;;
+
+  "test")
+    ddev playwright test "${@:2}"
+    echo "=== PLEASE NOTE: ==="
+    echo "If you were Please ignore the output recommendation above run 'npx ...' - to open the last HTML report run:"
+    echo "ddev 1x-playwright show-report"
+    ;;
+  "show-report")
+    host=$(ddev_hostname)
+    playwright_report_url="https://${host}:9324"
+    # Note: playwright "report server" hangs.
+    sleep 1 && open $playwright_report_url & jobs
+    ddev playwright show-report --host=0.0.0.0
+    ;;
+  *)
+    echo "Please provide one of these commands (convenience wrappers around the 'ddev playwright'-command)."
+    echo "ddev 1x-playwright ui - starts the in-built development UI for easier testing."
+    echo "ddev 1x-playwright test [... all arguments, options and toggles available the playwright test command] - run tests (use --help for details)"
+    echo "ddev 1x-playwright show-report - starts the report server and opens a browser window to inspect report"
+    echo ""
+    echo "Consider running 'ddev playwright' for more commands"
+    exit 0
+    ;;
+esac
