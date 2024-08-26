@@ -26,8 +26,14 @@ if [! command -v jq &> /dev/null ]; then
     echo "${RED}jq command not found - you'll need to adjust the test/playwright/playwright.config.ts manually!"
 else
     ddev_hostname=`ddev status -j | jq -r '.["raw"]["hostnames"][0]'`
-    # @todo - proper templating
-    pushd test/playwright && sed -i "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+    # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
+    # Make this work on MacOS and Linux >.<
+    if [[ $OSTYPE == darwin* ]]; then
+      pushd test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+    else
+      pushd test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+    fi
+
 fi
 
 # @todo: Some people want to run playwright outside ddev ...
