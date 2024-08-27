@@ -2,8 +2,9 @@
 
 ## #ddev-generated
 ## Description: Run deviantintegral/ddev-playwright commands in a slightly more sane way :)
-## Usage: 1x-playwright test <rest passed to
-## Usage: 1x-playwright show
+##
+## Usage: 1x-playwright
+## OSTypes: darwin,linux
 
 start=`date +%s`
 
@@ -35,7 +36,7 @@ case "$1" in
   "codegen")
     host=$(ddev_hostname)
     kasmvnc_url="https://${host}:8444"
-    echo "Please note - if asked for authentication login is your username on the host (`whomai`) and the password is 'secret' (without the ')"
+    echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
     sleep 1 && open $kasmvnc_url & jobs
     ddev playwright codegen "${@:2}"
     ;;
@@ -55,21 +56,39 @@ case "$1" in
     ddev playwright show-report --host=0.0.0.0
     ;;
 
-  "cr"|"ff"|"wk")
+  "cr")
     host=$(ddev_hostname)
     kasmvnc_url="https://${host}:8444"
     # Note: playwright "ff|cr|wk" hangs.
     sleep 1 && open $kasmvnc_url & jobs
-    echo "Please note - if asked for authentication login is your username on the host (`whomai`) and the password is 'secret' (without the ')"
+    echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
     ddev playwright "$1" "${@:2}"
-    ;;&
+    ;;
 
-  "kasmvnc"|"desktop")
+  "ff")
     host=$(ddev_hostname)
     kasmvnc_url="https://${host}:8444"
-    echo "Please note - if asked for authentication login is your username on the host (`whomai`) and the password is 'secret' (without the ')"
+    # Note: playwright "ff|cr|wk" hangs.
+    sleep 1 && open $kasmvnc_url & jobs
+    echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
+    ddev playwright "$1" "${@:2}"
+    ;;
+
+  "wk")
+    host=$(ddev_hostname)
+    kasmvnc_url="https://${host}:8444"
+    # Note: playwright "ff|cr|wk" hangs.
+    sleep 1 && open $kasmvnc_url & jobs
+    echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
+    ddev playwright "$1" "${@:2}"
+    ;;
+
+  "kasmvnc")
+    host=$(ddev_hostname)
+    kasmvnc_url="https://${host}:8444"
+    echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
     open $kasmvnc_url
-    ;;&
+    ;;
 
   *)
     echo "Please provide one of these commands (primarily convenience wrappers around the 'ddev playwright'-command)."
@@ -80,7 +99,7 @@ case "$1" in
     echo "ddev 1x-playwright ui - starts the in-built development UI for easier continuous testing."
     echo ""
     echo "ddev 1x-playwright cr|ff|wk [options] url - opens chrome (cr), firefox (ff) or webkit (wk) in the container and shows it via the kasmvnc connection in the browser."
-    echo "ddev 1x-playwright kasmvnc|desktop - opens the desktop in the web container via VNC (for e.g. watching headed test)."
+    echo "ddev 1x-playwright kasmvnc - opens the desktop in the web container via VNC (for e.g. watching headed test)."
     echo ""
     echo "Some commands have subcommands and all commands have options that you can explore with --help."
     echo "Please note: some commands (codegen, ui, cr|ff|webkit, kasmvnc) open a new browser to show the 'embedded' desktop and authentication might be needed. Login is `whoami` and password is 'secret' (without leading/trailing ')"
