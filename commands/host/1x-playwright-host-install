@@ -1,0 +1,47 @@
+#!/bin/bash
+
+## #ddev-generated
+## Description: Installs playwright on the host computer (NOT INSIDE DDEV!)
+## Usage: 1x-playwright-host-install
+
+start=`date +%s`
+
+# Colors for printing messages.
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+BROWN='\033[0;33m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}Installing playwright (on HOST):${NC}"
+
+if ! command -v npx 2>&1 >/dev/null
+then
+    echo -e "${RED}'npx'-command not found on the host machine - you'll need to install nodejs before - if you have questions, please contact #devops or #developer-channel."
+    exit 0;
+fi
+
+echo -e "Please note this will install playwright on your HOST machine - *not* inside DDEV!\n"
+
+echo -e "Creating test-directory $DDEV_APPROOT/test/playwright"
+mkdir -p $DDEV_APPROOT/test/playwright
+# To install with npx.
+pushd $DDEV_APPROOT/test/playwright && npx --yes create-playwright@latest --lang=Javascript --quiet
+
+if [! ddev exec "command -v jq" &> /dev/null ]; then
+    playwright_error = "jq command not found in ddev web container - you'll need to adjust the test/playwright/playwright.config.ts manually!"
+    echo -e "${RED}jq command not found - you'll need to adjust the test/playwright/playwright.config.ts manually!"
+else
+    ddev_hostname=`ddev status -j | ddev exec jq -r .raw.hostnames[0]`
+    # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
+    # Make this work on MacOS and Linux >.<
+    cd $DDEV_APPROOT
+    if [[ $OSTYPE == darwin* ]]; then
+      pushd test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+    else
+      pushd test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+    fi
+fi
+
+echo -e "\n${CYAN}Please check above for any comments/errors: you might have to run 'npx  to test/playwright\n\n"
+echo -e "${GREEN}To run tests change to 'test/playwright/' directory ('cd $DDEV_APPROOT/test/playwright/') and run 'npx playwright test example'\n"

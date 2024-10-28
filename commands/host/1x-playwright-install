@@ -21,11 +21,10 @@ ddev exec -d /var/www/html/ mkdir -p test/playwright
 # To install with npx.
 ddev exec -d /var/www/html/test/playwright npx --yes create-playwright@latest --lang=Javascript --quiet
 
-if [! ddev exec command -v jq &> /dev/null ]; then
-    playwright_error = "jq command not found in ddev web container - you'll need to adjust the test/playwright/playwright.config.ts manually!"
-    echo "${RED}jq command not found - you'll need to adjust the test/playwright/playwright.config.ts manually!"
+if [! ddev exec "command -v jq" &> /dev/null ]; then
+    echo -e "${RED}jq command not found in ddev web container - you'll need to adjust the test/playwright/playwright.config.ts manually!"
 else
-    ddev_hostname=`ddev status -j | ddev jq -r raw.hostnames[0]`
+    ddev_hostname=`ddev status -j | ddev exec jq -r .raw.hostnames[0]`
     # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
     # Make this work on MacOS and Linux >.<
     if [[ $OSTYPE == darwin* ]]; then
