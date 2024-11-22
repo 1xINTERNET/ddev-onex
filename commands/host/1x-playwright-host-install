@@ -35,11 +35,10 @@ else
     ddev_hostname=`ddev status -j | ddev exec jq -r .raw.hostnames[0]`
     # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
     # Make this work on MacOS and Linux >.<
-    cd $DDEV_APPROOT
     if [[ $OSTYPE == darwin* ]]; then
-      pushd test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+      pushd $DDEV_APPROOT/test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
     else
-      pushd test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+      pushd $DDEV_APPROOT/test/playwright && sed -i "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
     fi
 fi
 
