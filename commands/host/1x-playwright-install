@@ -37,3 +37,7 @@ fi
 
 # @todo: Some people want to run playwright outside ddev ...
 ddev install-playwright
+
+# Install basic
+echo -e "${GREEN}Adjust .npmrc and installing @dxp/playwright-tools: ${NC}"
+pushd test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc && npm add -D @dxp/playwright-tools ; popd
