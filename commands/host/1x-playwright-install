@@ -27,6 +27,7 @@ else
     ddev_hostname=`ddev status -j | ddev exec jq -r .raw.hostnames[0]`
     # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
     # Make this work on MacOS and Linux >.<
+    cd $DDEV_APPROOT
     if [[ $OSTYPE == darwin* ]]; then
       pushd test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
     else
@@ -40,4 +41,4 @@ ddev install-playwright
 
 # Install basic
 echo -e "${GREEN}Adjust .npmrc and installing @dxp/playwright-tools: ${NC}"
-pushd test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc && npm add -D @dxp/playwright-tools ; popd
+pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc && npm add -D @dxp/playwright-tools ; popd

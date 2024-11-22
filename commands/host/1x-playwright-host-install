@@ -45,7 +45,7 @@ fi
 
 # Install basic
 echo -e "${GREEN}Adjust .npmrc and installing @dxp/playwright-tools: ${NC}"
-pushd test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc && npm add -D @dxp/playwright-tools ; popd
+pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc && npm add -D @dxp/playwright-tools ; popd
 
 echo -e "\n${CYAN}Please check above for any comments/errors: you might have to run 'npx  to test/playwright\n\n"
 echo -e "${GREEN}To run tests change to 'test/playwright/' directory ('cd $DDEV_APPROOT/test/playwright/') and run 'npx playwright test example'\n"
