@@ -7,6 +7,10 @@ that run on the host or inside ddev containers.
 
 `ddev get 1xINTERNET/ddev-onex`
 
+or if you use a current `ddev`:
+
+`ddev add-on get 1xINTERNET/ddev-onex`
+
 # Commands
 
 Commands running on the host:
@@ -15,8 +19,8 @@ Commands running on the host:
 - `ddev 1x-playwright-host-install` - installs playwright on the *host*.
 - `ddev 1x-granite` - runs `build.sh` in the volcano theme (@todo: should probably be moved to web-container)
 - `ddev 1x-start` - test script wrapping `ddev start`, `ddev auth ssh` and symlinking `.gitconfig` to ensure git commit are nice.
-- `ddev 1x-theme-debug` ...
-- `ddev 1x-twig-debug` ...
+- `ddev 1x-theme-debug`: wraps 1X's internal `theme-debug` helper
+- `ddev 1x-twig-debug`: wraps 1X's internal `twig-debug` helper
 
 Commands running in the web-container:
 - `ddev 1x-phpcs` - run phpcs *within* the webcontainer to ensure correct PHP version.
