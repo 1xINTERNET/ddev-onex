@@ -5,7 +5,7 @@ that run on the host or inside ddev containers.
 
 # Installation
 
-`ddev get frega/ddev-onex`
+`ddev get 1xINTERNET/ddev-onex`
 
 # Commands
 
