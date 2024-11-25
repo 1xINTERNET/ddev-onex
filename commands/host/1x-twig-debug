@@ -4,55 +4,59 @@
 ## Usage: 1x-twig-debug
 ## Example: "ddev 1x-twig-debug (enable|disable) @self"
 
-enable_debug() {
-  if [ -z $1 ]; then
-    local drush_alias='@self'
-  else
-    local drush_alias="$1"
-  fi
+# If no alias is provided it defaults to @self
+drush_alias="${2:-@self}"
 
-  # Enable Twig debugging in Drupal 10
-  echo "Enabling Twig debugging for $drush_alias ..."
-  ddev drush $drush_alias state:set twig_debug 1 --input-format=integer && \
-  ddev drush $drush_alias state:set twig_cache_disable 1 --input-format=integer && \
-  ddev drush $drush_alias state:set disable_rendered_output_cache_bins 1 --input-format=integer && \
-  ddev drush $drush_alias cache:rebuild
+# Get the drupal version
+drupal_version=$(ddev drush $drush_alias status --field=drupal-version 2>/dev/null | tr -d '\r')
+echo "Drupal version detected: $drupal_version"
+
+# Function to compare the drupal version
+version_ge() {
+  printf '%s\n%s' "$1" "$2" | sort -C -V
 }
 
-disable_debug() {
-  if [ -z $1 ]; then
-    local drush_alias='@self'
-  else
-    local drush_alias="$1"
-  fi
-
-  # Disable Twig debugging in Drupal 10
-  echo "Disabling Twig debugging for $drush_alias ..."
-  ddev drush $drush_alias state:set twig_debug 0 --input-format=integer && \
-  ddev drush $drush_alias state:set twig_cache_disable 0 --input-format=integer && \
-  ddev drush $drush_alias state:set disable_rendered_output_cache_bins 0 --input-format=integer && \
-  ddev drush $drush_alias cache:rebuild
-}
+# Choose the appropriate commands to enable twig debug based on the drupal version
+if version_ge "10.3.0" "$drupal_version"; then
+  # For Drupal 10.3.0+
+  enable_cmd="ddev drush $drush_alias php:eval \"\\Drupal::keyValue('development_settings')->setMultiple(['disable_rendered_output_cache_bins' => TRUE, 'twig_debug' => TRUE, 'twig_cache_disable' => TRUE]);\" && ddev drush $drush_alias cache:rebuild"
+  disable_cmd="ddev drush $drush_alias php:eval \"\\Drupal::keyValue('development_settings')->setMultiple(['disable_rendered_output_cache_bins' => FALSE, 'twig_debug' => FALSE, 'twig_cache_disable' => FALSE]);\" && ddev drush $drush_alias cache:rebuild"
+  get_state_cmd="ddev drush $drush_alias php:eval \"echo (int) \\Drupal::keyValue('development_settings')->get('twig_debug', FALSE);\""
+else
+  # For Drupal versions before 10.3.0
+  enable_cmd="ddev drush $drush_alias state:set twig_debug 1 --input-format=integer && ddev drush $drush_alias state:set twig_cache_disable 1 --input-format=integer && ddev drush $drush_alias state:set disable_rendered_output_cache_bins 1 --input-format=integer && ddev drush $drush_alias cache:rebuild"
+  disable_cmd="ddev drush $drush_alias state:set twig_debug 0 --input-format=integer && ddev drush $drush_alias state:set twig_cache_disable 0 --input-format=integer && ddev drush $drush_alias state:set disable_rendered_output_cache_bins 0 --input-format=integer && ddev drush $drush_alias cache:rebuild"
+  get_state_cmd="ddev drush $drush_alias state:get twig_debug"
+fi
 
 case "$1" in
   "enable")
-    enable_debug $2
+    echo "Enabling Twig debugging..."
+    eval "$enable_cmd"
     ;;
   "disable")
-    disable_debug $2
+    echo "Disabling Twig debugging..."
+    eval "$disable_cmd"
     ;;
   *)
-    if [ -z $1 ]; then
-      drush_alias_state='@self'
-    else
-      drush_alias_state="$1"
-    fi
+    # Check current state and toggle accordingly
+    twig_debug_state=$(eval "$get_state_cmd")
 
-    twig_debug_state=$(ddev drush $drush_alias_state state:get twig_debug)
-    if [ -z $twig_debug_state ] || [ $twig_debug_state -eq 0 ]; then
-      enable_debug $1
+    # Debugging output to ensure the state is being captured correctly
+    echo "Current Twig debug state: $twig_debug_state"
+
+    # Ensure that twig_debug_state is a valid number
+    if [[ "$twig_debug_state" =~ ^[0-9]+$ ]]; then
+      if [ "$twig_debug_state" -eq 0 ]; then
+        echo "Twig debugging is currently disabled. Enabling..."
+        eval "$enable_cmd"
+      else
+        echo "Twig debugging is currently enabled. Disabling..."
+        eval "$disable_cmd"
+      fi
     else
-      disable_debug $1
+      echo "Error: Unable to retrieve valid twig_debug state. Output was: $twig_debug_state"
+      exit 1
     fi
     ;;
 esac
