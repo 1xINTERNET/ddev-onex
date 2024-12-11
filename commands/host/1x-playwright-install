@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## #ddev-generated
-## Description: Install the deviantintegral/ddev-playwright addon and does some basic onex config.
+## Description: Install the lullabot/ddev-playwright addon and does some basic onex config.
 ## Usage: 1x-playwright-install
 
 start=`date +%s`
@@ -14,7 +14,7 @@ BROWN='\033[0;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
-ddev get deviantintegral/ddev-playwright
+ddev get lullabot/ddev-playwright
 ddev restart
 
 ddev exec -d /var/www/html/ mkdir -p test/playwright
