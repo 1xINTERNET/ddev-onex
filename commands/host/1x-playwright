@@ -27,8 +27,8 @@ ddev_hostname () {
   echo `ddev status -j | $jq_command -r '.["raw"]["hostnames"][0]'`
 }
 
-ddev_is_installed=`ddev add-on list --installed -j | ${jq_command} -c '.raw[] | select(.Name | contains("playwright"))'`
-if [ -z "${ddev_is_installed}" ]; then
+playwright_installed_inside_ddev=`ddev add-on list --installed -j | ${jq_command} -c '.raw[] | select(.Name | contains("playwright"))'`
+if [ -z "${playwright_installed_inside_ddev}" ]; then
   echo "Notice: Using playwright on host!"
   cd test/playwright
   npx playwright "${@:1}"
