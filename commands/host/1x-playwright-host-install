@@ -25,8 +25,13 @@ echo -e "Please note this will install playwright on your HOST machine - *not* i
 
 echo -e "Creating test-directory $DDEV_APPROOT/test/playwright"
 mkdir -p $DDEV_APPROOT/test/playwright
+
+# Adjust for 1X-internet private repository
+echo -e "${GREEN}Adjust .npmrc${NC}"
+pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc ; popd
+
 # To install with npx.
-pushd $DDEV_APPROOT/test/playwright && npx --yes create-playwright@latest --lang=Javascript --quiet
+pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
 
 if [! ddev exec "command -v jq" &> /dev/null ]; then
     playwright_error = "jq command not found in ddev web container - you'll need to adjust the test/playwright/playwright.config.ts manually!"
@@ -41,10 +46,6 @@ else
       pushd $DDEV_APPROOT/test/playwright && sed -i "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
     fi
 fi
-
-# Install basic
-echo -e "${GREEN}Adjust .npmrc and installing @dxp/playwright-tools: ${NC}"
-pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc && npm add -D @dxp/playwright-tools ; popd
 
 echo -e "\n${CYAN}Please check above for any comments/errors: you might have to run 'npx  to test/playwright\n\n"
 echo -e "${GREEN}To run tests change to 'test/playwright/' directory ('cd $DDEV_APPROOT/test/playwright/') and run 'npx playwright test example'\n"
