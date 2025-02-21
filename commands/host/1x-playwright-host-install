@@ -41,9 +41,9 @@ else
     # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
     # Make this work on MacOS and Linux >.<
     if [[ $OSTYPE == darwin* ]]; then
-      pushd $DDEV_APPROOT/test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+      pushd $DDEV_APPROOT/test/playwright && sed -i '' "s@http://127.0.0.1:3000@https://${ddev_hostname}@g" playwright.config.ts && popd
     else
-      pushd $DDEV_APPROOT/test/playwright && sed -i "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+      pushd $DDEV_APPROOT/test/playwright && sed -i "s@http://127.0.0.1:3000@https://${ddev_hostname}@g" playwright.config.ts && popd
     fi
 fi
 

@@ -18,8 +18,12 @@ ddev get lullabot/ddev-playwright
 ddev restart
 
 ddev exec -d /var/www/html/ mkdir -p test/playwright
+# Adjust for 1X-internet private repository
+echo -e "${GREEN}Adjust .npmrc${NC}"
+pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc ; popd
+
 # To install with npx.
-ddev exec -d /var/www/html/test/playwright npx --yes create-playwright@latest --lang=Javascript --quiet
+pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
 
 if [! ddev exec "command -v jq" &> /dev/null ]; then
     echo -e "${RED}jq command not found in ddev web container - you'll need to adjust the test/playwright/playwright.config.ts manually!"
@@ -28,16 +32,12 @@ else
     # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
     # Make this work on MacOS and Linux >.<
     if [[ $OSTYPE == darwin* ]]; then
-      pushd $DDEV_APPROOT/test/playwright && sed -i '' "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+      pushd $DDEV_APPROOT/test/playwright && sed -i '' "s@http://127.0.0.1:3000@https://${ddev_hostname}@g" playwright.config.ts && popd
     else
-      pushd $DDEV_APPROOT/test/playwright && sed -i "s@// baseURL: 'http://127.0.0.1:3000',@baseURL: 'https://${ddev_hostname}',\n    ignoreHTTPSErrors: true,@g" playwright.config.ts && popd
+      pushd $DDEV_APPROOT/test/playwright && sed -i "s@http://127.0.0.1:3000@https://${ddev_hostname}@g" playwright.config.ts && popd
     fi
 
 fi
 
-# @todo: Some people want to run playwright outside ddev ...
+# Install playwright *inside* the ddev container (see lullabot/ddev-playwright)
 ddev install-playwright
-
-# Install basic
-echo -e "${GREEN}Adjust .npmrc and installing @dxp/playwright-tools: ${NC}"
-pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc && npm add -D @dxp/playwright-tools ; popd
