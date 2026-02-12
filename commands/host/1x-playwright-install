@@ -20,7 +20,42 @@ ddev restart
 ddev exec -d /var/www/html/ mkdir -p test/playwright
 # Adjust for 1X-internet private repository
 echo -e "${GREEN}Adjust .npmrc${NC}"
-pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc ; popd
+
+NPMRC_DIR="${DDEV_APPROOT}/test/playwright"
+NPMRC_FILE="${NPMRC_DIR}/.npmrc"
+
+LINE_REGISTRY='@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/'
+LINE_TOKEN='//git.1xinternet.de/api/v4/groups/392/-/packages/npm/:_authToken=${PERSONAL_GITLAB_TOKEN}'
+
+# 1) Ensure token is available in the current shell environment
+if [[ -z "${PERSONAL_GITLAB_TOKEN:-}" ]]; then
+  echo -e "${RED}PERSONAL_GITLAB_TOKEN is not set.${NC}"
+  echo -e "${BROWN}Note: variables from ~/.zshrc are usually loaded only in interactive shells. Export it before running the script, e.g.:${NC}"
+  echo -e "${BROWN}  export PERSONAL_GITLAB_TOKEN='<YOUR_TOKEN>'${NC}"
+  echo -e "${BROWN}If you need the token inside the DDEV web container, add this to ~/.ddev/global_config.yaml and restart DDEV:${NC}"
+  echo -e "${BROWN}  web_environment:${NC}"
+  echo -e "${BROWN}    - PERSONAL_GITLAB_TOKEN=\${PERSONAL_GITLAB_TOKEN}${NC}"
+  echo -e "${BROWN}Further instructions:${NC}"
+  echo -e "${BROWN}  - https://intranet.1xinternet.de/docs/development/drupal/local-development-ddev${NC}"
+  echo -e "${BROWN}  - https://docs.ddev.com/en/stable/users/extend/customization-extendibility/${NC}"
+  exit 1
+fi
+# 2) Ensure directory / file exist
+mkdir -p "${NPMRC_DIR}"
+touch "${NPMRC_FILE}"
+
+# 3) Append lines only if they are missing (exact line match)
+append_if_missing() {
+  local line="$1"
+  local file="$2"
+
+  if ! grep -F -x -q -- "${line}" "${file}"; then
+    printf '%s\n' "${line}" >> "${file}"
+  fi
+}
+
+append_if_missing "${LINE_REGISTRY}" "${NPMRC_FILE}"
+append_if_missing "${LINE_TOKEN}" "${NPMRC_FILE}"
 
 # To install with npx.
 pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
