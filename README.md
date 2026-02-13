@@ -14,6 +14,8 @@ or if you use a current `ddev`:
 # Commands
 
 Commands running on the host:
+
+- `ddev 1x-setup-gitlab`- provides a generic setup for gitlab CI. Read the README_GITLAB.md for details. This only needs to be executed once. 
 - `ddev 1x-playwright` - provides a convenience wrapper open the UI/reports  directly in the browser (determining the right hostnames and ports).
 - `ddev 1x-playwright-install` - installs `deviantintegral/ddev-playwright` and configures it minimally
 - `ddev 1x-playwright-host-install` - installs playwright on the *host*.
@@ -23,4 +25,5 @@ Commands running on the host:
 - `ddev 1x-twig-debug`: wraps 1X's internal `twig-debug` helper
 
 Commands running in the web-container:
+
 - `ddev 1x-phpcs` - run phpcs *within* the webcontainer to ensure correct PHP version.

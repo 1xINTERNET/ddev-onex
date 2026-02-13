@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Define variables
+SERVICE_NAME="GITLAB_PERSONAL_TOKEN"
+ENV_VAR_NAME="PERSONAL_ACCESS_TOKEN"
+
+echo "🔐 Starting GitLab Token Secure Setup..."
+
+# 1. Detect OS and set retrieval command
+OS_TYPE="$(uname)"
+if [ "$OS_TYPE" == "Darwin" ]; then
+    echo "🍎 macOS detected."
+    GET_CMD="security find-generic-password -s \"$SERVICE_NAME\" -w"
+    STORE_FUNC() { security add-generic-password -a "$USER" -s "$SERVICE_NAME" -w "$1" -U; }
+elif [ "$OS_TYPE" == "Linux" ]; then
+    echo "🐧 Linux detected."
+    if ! command -v secret-tool &> /dev/null; then
+        echo "❌ Error: libsecret-tools is not installed. Run 'sudo apt install libsecret-tools'."
+        exit 1
+    fi
+    GET_CMD="secret-tool lookup token_type gitlab_token user \"$USER\""
+    STORE_FUNC() { echo "$1" | secret-tool store --label="GitLab Personal Token" token_type gitlab_token user "$USER"; }
+else
+    echo "❌ Unsupported OS."
+    exit 1
+fi
+
+# 2. Ask for the token
+read -sp "🔑 Paste your GitLab Personal Access Token: " GITLAB_TOKEN
+echo -e "\n"
+
+if [ -z "$GITLAB_TOKEN" ]; then
+    echo "❌ No token provided. Exiting."
+    exit 1
+fi
+
+# 3. Store in OS Vault
+STORE_FUNC "$GITLAB_TOKEN"
+echo "✅ Token stored securely in OS Vault."
+
+# 4. Update .zshrc
+ZSH_LINE="export $ENV_VAR_NAME='\$($GET_CMD)'"
+if grep -q "$ENV_VAR_NAME" ~/.zshrc; then
+    # Update existing line
+    sed -i.bak "s|export $ENV_VAR_NAME=.*|$ZSH_LINE|" ~/.zshrc
+    echo "🔄 Updated existing $ENV_VAR_NAME in ~/.zshrc"
+else
+    # Append new line
+    echo -e "\n# GitLab Secure Token\n$ZSH_LINE" >> ~/.zshrc
+    echo "➕ Added $ENV_VAR_NAME to ~/.zshrc"
+fi
+
+# 5. DDEV Global Configuration
+if command -v ddev &> /dev/null; then
+    # Add to global web-environment
+    ddev config global --web-environment-add="$ENV_VAR_NAME=\${$ENV_VAR_NAME}"
+
+    # Setup global homeadditions
+    mkdir -p ~/.ddev/homeadditions/.composer
+
+    # .npmrc
+    echo "//gitlab.1xinternet.de/:_authToken=\${$ENV_VAR_NAME}" > ~/.ddev/homeadditions/.npmrc
+
+    # auth.json
+    cat <<EOF > ~/.ddev/homeadditions/.composer/auth.json
+{
+    "gitlab-token": {
+        "gitlab.com": "\${$ENV_VAR_NAME}"
+    }
+}
+EOF
+    echo "✅ DDEV global config and homeadditions updated."
+else
+    echo "⚠️  DDEV not found. Skipping DDEV-specific steps."
+fi
+
+echo -e "\n✨ Setup Complete!"
+echo "👉 Run 'source ~/.zshrc' or restart your terminal to activate."

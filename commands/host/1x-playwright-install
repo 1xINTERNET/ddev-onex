@@ -20,7 +20,38 @@ ddev restart
 ddev exec -d /var/www/html/ mkdir -p test/playwright
 # Adjust for 1X-internet private repository
 echo -e "${GREEN}Adjust .npmrc${NC}"
-pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc ; popd
+
+NPMRC_DIR="${DDEV_APPROOT}/test/playwright"
+NPMRC_FILE="${NPMRC_DIR}/.npmrc"
+
+LINE_REGISTRY='@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/'
+LINE_TOKEN='//git.1xinternet.de/api/v4/groups/392/-/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}'
+
+# 1) Ensure token is available in the current shell environment
+if [[ -z "${PERSONAL_ACCESS_TOKEN:-}" ]]; then
+  echo -e "${RED}PERSONAL_ACCESS_TOKEN is not set.${NC}"
+  echo -e "${BROWN}Please run the setup script to configure your GitLab token:${NC}"
+  echo -e "${CYAN}  ddev 1x-setup-gitlab${NC}"
+  echo -e "${BROWN} check README-GITLAB.md for further information${NC}"
+  exit 1
+fi
+
+# 2) Ensure directory / file exist
+mkdir -p "${NPMRC_DIR}"
+touch "${NPMRC_FILE}"
+
+# 3) Append lines only if they are missing (exact line match)
+append_if_missing() {
+  local line="$1"
+  local file="$2"
+
+  if ! grep -F -x -q -- "${line}" "${file}"; then
+    printf '%s\n' "${line}" >> "${file}"
+  fi
+}
+
+append_if_missing "${LINE_REGISTRY}" "${NPMRC_FILE}"
+append_if_missing "${LINE_TOKEN}" "${NPMRC_FILE}"
 
 # To install with npx.
 pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
