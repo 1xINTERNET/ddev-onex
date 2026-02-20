@@ -26,20 +26,9 @@ echo -e "Please note this will install playwright on your HOST machine - *not* i
 echo -e "Creating test-directory $DDEV_APPROOT/test/playwright"
 mkdir -p $DDEV_APPROOT/test/playwright
 
-# Verify global .npmrc file.
-if ! grep -F -- "@dxp:registry=" ~/.npmrc >/dev/null 2>&1; then
-    printf '❌ Error! You need to add the DXP registry to you global .npmrc\n' >&2
-    echo "Run this command to add the DXP registry to your global .npmrc:" >&2
-    echo "echo '@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/' >> ~/.npmrc" >&2
-    exit 1
-fi
-# Check if GitLab PAT for npm registry exists in ~/.npmrc
-if ! grep -E -- "^//git\.1xinternet\.de/.*:_authToken=glpat-" ~/.npmrc >/dev/null 2>&1; then
-    printf '❌ Error! You need to add your GitLab personal access token to your global .npmrc\n' >&2
-    echo "Run this command to add your GitLab token to ~/.npmrc (replace YOUR_TOKEN):" >&2
-    echo "echo '//git.1xinternet.de/api/v4/groups/392/-/packages/npm/:_authToken=YOUR_TOKEN' >> ~/.npmrc" >&2
-    exit 1
-fi
+# Adjust for 1X-internet private repository
+echo -e "${GREEN}Adjust .npmrc${NC}"
+pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc ; popd
 
 # If no package-lock.json found run initial setup, else execute build.sh.
 if [ ! -f $DDEV_APPROOT/test/playwright/package-lock.json ]; then
