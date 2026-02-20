@@ -30,55 +30,8 @@ mkdir -p $DDEV_APPROOT/test/playwright
 echo -e "${GREEN}Adjust .npmrc${NC}"
 pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc ; popd
 
-# If no package-lock.json found run initial setup, else execute build.sh.
-if [ ! -f $DDEV_APPROOT/test/playwright/package-lock.json ]; then
-    echo "👀 Existing package-lock.json not found. Creating new test project..."
-    pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
-    node -p 'process.release.lts ? "lts/"+process.release.lts.toLowerCase() : "lts/*"' > .nvmrc
-    # Create build.sh
-    if [ ! -f "$DDEV_APPROOT/test/playwright/build.sh" ]; then
-        cat << 'EOF' > "$DDEV_APPROOT/test/playwright/build.sh"
-#!/bin/bash
-
-# The purpose of this script is to install the test dependencies.
-
-# Function for error catching.
-# @see http://linuxcommand.org/lc3_wss0140.php
-error_exit () {
-  echo "$1" 1>&2
-  exit 1
-}
-
-# Path of this script.
-scriptPath=$(dirname $0)
-pushd $scriptPath || exit 1
-
-# Run nvm version check
-if [ -f $HOME/.nvm/nvm.sh ]; then
-  source $HOME/.nvm/nvm.sh
-fi
-
-# Get the required node version from .nvmrc
-required_node_version=$(<.nvmrc)
-
-# Enforce the version
-nvm use $required_node_version || { nvm install -b $required_node_version && nvm use $required_node_version || error_exit "nvm failed."; }
-
-NODE_ENV=production
-
-echo "Installing test dependencies..."
-
-# npm install.
-CI='' npm ci --prefer-offline --no-audit || error_exit "npm install failed."
-EOF
-    fi
-    chmod +x "$DDEV_APPROOT/test/playwright/build.sh"
-else
-    if [ -f "$DDEV_APPROOT/test/playwright/build.sh" ]; then
-        chmod +x "$DDEV_APPROOT/test/playwright/build.sh"
-        $DDEV_APPROOT/test/playwright/build.sh || { echo "❌ Error! Build failed"; exit 1; }
-    fi
-fi
+# To install with npx.
+pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
 
 if [! ddev exec "command -v jq" &> /dev/null ]; then
     playwright_error = "jq command not found in ddev web container - you'll need to adjust the test/playwright/playwright.config.ts manually!"
