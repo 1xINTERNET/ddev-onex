@@ -49,13 +49,15 @@ fi
 
 # If it is set now, prompt the user to confirm.
 if [ ! -z "$PERSONAL_ACCESS_TOKEN" ]; then
-  echo "Please note we've determined this as your 1xinternet gitlab token to be: $PERSONAL_ACCESS_TOKEN"
-  read -p "Please confirm to proceed with this token (Y/n): " -n 1 -r REPLY
-  REPLY=${REPLY:-Y}
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Operation cancelled."
-    exit 1
-  fi
+    echo "Please note we've determined your 1xinternet gitlab token is: $PERSONAL_ACCESS_TOKEN"
+    if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
+      read -p "Please confirm to proceed with this token (Y/n): " -n 1 -r REPLY
+      REPLY=${REPLY:-Y}
+      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+          echo "Operation cancelled."
+          exit 1
+      fi
+    fi
 fi
 
 # If still not set, prompt the user
@@ -72,7 +74,12 @@ fi
 # Setup token for NPM
 # Remove old token if exists to replace with new one, or just append
 # A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
-sed -i '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
+# Make this work on MacOS and Linux >.<
+if [[ $OSTYPE == darwin* ]]; then
+  sed -i '' '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
+else
+  sed -i '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
+fi
 echo "//git.1xinternet.de/api/v4/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
 
 # Configure NPM in homeadditions so the container picks it up.
