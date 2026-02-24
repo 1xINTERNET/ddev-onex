@@ -14,7 +14,7 @@ BROWN='\033[0;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
-ddev get lullabot/ddev-playwright
+ddev add-on get lullabot/ddev-playwright
 ddev restart
 
 ddev exec -d /var/www/html/ mkdir -p test/playwright
