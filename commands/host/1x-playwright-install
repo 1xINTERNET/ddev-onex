@@ -19,8 +19,16 @@ ddev restart
 
 ddev exec -d /var/www/html/ "mkdir -p test/playwright"
 
-# To install with npx.
-pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
+# Let's make sure all the @dxp-scoped package is defined.
+DXP_REGISTRY=$(ddev exec "npm config get @dxp:registry")
+
+if [ -z "$DXP_REGISTRY" ] ; then
+    echo "The @dxp-scope is not configured inside the container aborting. Consider running the command 'ddev 1x-token-setup'!"
+    exit 1
+fi
+
+# Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
+ddev exec -d /var/www/html/test/playwright "npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet"
 
 # Install playwright *inside* the ddev container (see lullabot/ddev-playwright)
 ddev install-playwright
