@@ -50,16 +50,16 @@ fi
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
-if ! grep -q "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
-    echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
+if ! grep -q "@1xinternet:registry=https://git.1xinternet.de/api/v4/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
+    echo "@1xinternet:registry=https://git.1xinternet.de/api/v4/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
 fi
 
 # Remove old token if exists to replace with new one, or just append
 # A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
-# User request: echo "//git.1xinternet.de/api/v4/groups/392/-/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
+# User request: echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
 # We will use sed to remove existing token line if it matches the registry to avoid clutter
 sed -i '/\/\/git.1xinternet.de\/api\/v4\/groups\/392\/-\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
-echo "//git.1xinternet.de/api/v4/groups/392/-/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
+echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
 
 # Start the DDEV project (so containers run).
 ddev start
@@ -79,7 +79,3 @@ ddev stop
 ddev start
 
 echo "Setup complete!"
-
-# Note: if 
-# Persist the new auth.json from the container back to your host (if desired):
-# ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json
