@@ -76,9 +76,11 @@ fi
 # A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
 # Make this work on MacOS and Linux >.<
 if [[ $OSTYPE == darwin* ]]; then
-  sed -i '' '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
+    # "in-place editing only works for regular files" thus change directly ~/.npmrc
+    sed -i '' '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.npmrc
 else
-  sed -i '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
+    # "In-place editing" works also for symlinks on Linux, but for consistency's sake.
+    sed -i '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.npmrc
 fi
 echo "//git.1xinternet.de/api/v4/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
 
