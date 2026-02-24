@@ -1,6 +1,6 @@
 #!/bin/bash
 ## #ddev-generated
-# Description: Setup GitLab tokens and configure ddev environments
+# Description: Setup GitLab tokens, composer gitlab tokens as well as npm gitlab tokens and npm scoped packages.
 # Usage: 1x-token-setup
 
 set -e
@@ -9,9 +9,6 @@ set -e
 if ddev describe > /dev/null 2>&1; then
     ddev stop
 fi
-
-# Change to project root
-cd $DDEV_APPROOT
 
 # Ensure the DDEV homeadditions directory exists on your host.
 mkdir -p ~/.ddev/homeadditions/
@@ -25,19 +22,43 @@ touch ~/.npmrc
 
 # Symlink your local config into DDEV's homeadditions
 # Using -f to force overwrite if symlink exists
-ln -sf "$(realpath ~/.composer)" ~/.ddev/homeadditions/.composer
+# Symlink directory:
+ln -sf "$(realpath ~/.composer)" ~/.ddev/homeadditions
+# Symlink file:
 ln -sf "$(realpath ~/.npmrc)"    ~/.ddev/homeadditions/.npmrc
 
-# Also directly ensure homeadditions has valid JSON structure if symlinks fail or for redundancy
-# (Though symlinks should cover this, script follows user request logic)
-mkdir -p ~/.ddev/homeadditions/.composer
-if [ ! -f ~/.ddev/homeadditions/.composer/auth.json ]; then
-     echo '{}' > ~/.ddev/homeadditions/.composer/auth.json
-fi
-touch ~/.ddev/homeadditions/.npmrc
-
 # Set your personal access token
-# Check if PERSONAL_ACCESS_TOKEN is set, otherwise prompt
+# Check if PERSONAL_ACCESS_TOKEN is set, otherwise try to get it from composer
+if [ -z "$PERSONAL_ACCESS_TOKEN" ]; then
+    echo "Checking host's composer for an existing PERSONAL_ACCESS_TOKEN."
+    if command -v composer &> /dev/null; then
+        PERSONAL_ACCESS_TOKEN=$(composer config --global --auth gitlab-token.git.1xinternet.de 2>/dev/null || true)
+    fi
+fi
+
+# If still not set, try to get it from npm
+if [ -z "$PERSONAL_ACCESS_TOKEN" ]; then
+    echo "Checking host's npm for an existing PERSONAL_ACCESS_TOKEN."
+    if command -v npm &> /dev/null; then
+        PERSONAL_ACCESS_TOKEN=$(npm config get //git.1xinternet.de/:_authToken 2>/dev/null || true)
+        if [ "$PERSONAL_ACCESS_TOKEN" = "null" ] || [ "$PERSONAL_ACCESS_TOKEN" = "undefined" ]; then
+            PERSONAL_ACCESS_TOKEN=""
+        fi
+    fi
+fi
+
+# If it is set now, prompt the user to confirm.
+if [ ! -z "$PERSONAL_ACCESS_TOKEN" ]; then
+  echo "Please note we've determined this as your 1xinternet gitlab token to be: $PERSONAL_ACCESS_TOKEN"
+  read -p "Please confirm to proceed with this token (Y/n): " -n 1 -r REPLY
+  REPLY=${REPLY:-Y}
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Operation cancelled."
+    exit 1
+  fi
+fi
+
+# If still not set, prompt the user
 if [ -z "$PERSONAL_ACCESS_TOKEN" ]; then
     echo "Please enter your GitLab Personal Access Token (must have read_api & read_repository):"
     read -s PERSONAL_ACCESS_TOKEN
@@ -48,18 +69,23 @@ if [ -z "$PERSONAL_ACCESS_TOKEN" ]; then
     exit 1
 fi
 
+# Setup token for NPM
+# Remove old token if exists to replace with new one, or just append
+# A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
+sed -i '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
+echo "//git.1xinternet.de/api/v4/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
+
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
 if ! grep -q "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
     echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
 fi
 
-# Remove old token if exists to replace with new one, or just append
-# A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
-# User request: echo "//git.1xinternet.de/api/v4/groups/392/-/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
-# We will use sed to remove existing token line if it matches the registry to avoid clutter
-sed -i '/\/\/git.1xinternet.de\/api\/v4\/groups\/392\/-\/packages\/npm\/:_authToken=/d' ~/.ddev/homeadditions/.npmrc
-echo "//git.1xinternet.de/api/v4/groups/392/-/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
+# Configure NPM in homeadditions so the container picks it up.
+# We append if not already present to avoid duplication
+if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/group/1121/-/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
+    echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
+fi
 
 # Start the DDEV project (so containers run).
 ddev start
@@ -74,12 +100,16 @@ ddev exec "cat \$HOME/.composer/auth.json"
 # Now safely configure Composer with your GitLab token globally (in the container):
 ddev composer config --global --auth gitlab-token.git.1xinternet.de "${PERSONAL_ACCESS_TOKEN}"
 
+# @todo: Verify .npmrc
+# ddev exec "cat \$HOME/.npmrc" or ddev exec "npm config get"
+
 # Restart so everything is fully synced.
 ddev stop
 ddev start
 
 echo "Setup complete!"
 
-# Note: if 
-# Persist the new auth.json from the container back to your host (if desired):
+# Persist the new .composer/auth.json and .npmrc from the container back to your host (if desired):
+# @todo Be respectful: make sure this is desired and we don't just overwrite stuff on the host.
 # ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json
+# ddev exec 'cat $HOME/.npmrc' > ~/.npmrc
