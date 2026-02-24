@@ -27,25 +27,12 @@ echo -e "Creating test-directory $DDEV_APPROOT/test/playwright"
 mkdir -p $DDEV_APPROOT/test/playwright
 
 # Adjust for 1X-internet private repository
+# @todo probably this should be removed.
 echo -e "${GREEN}Adjust .npmrc${NC}"
 pushd $DDEV_APPROOT/test/playwright && echo '@dxp:registry=https://git.1xinternet.de/api/v4/packages/npm/' >> .npmrc ; popd
 
 # To install with npx.
-pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet
-
-if [! ddev exec "command -v jq" &> /dev/null ]; then
-    playwright_error = "jq command not found in ddev web container - you'll need to adjust the test/playwright/playwright.config.ts manually!"
-    echo -e "${RED}jq command not found - you'll need to adjust the test/playwright/playwright.config.ts manually!"
-else
-    ddev_hostname=`ddev status -j | ddev exec jq -r .raw.hostnames[0]`
-    # @todo: better templating of this, e.g. we normally *don't* test in parallel in 4 browsers ...
-    # Make this work on MacOS and Linux >.<
-    if [[ $OSTYPE == darwin* ]]; then
-      pushd $DDEV_APPROOT/test/playwright && sed -i '' "s@http://127.0.0.1:3000@https://${ddev_hostname}@g" playwright.config.ts && popd
-    else
-      pushd $DDEV_APPROOT/test/playwright && sed -i "s@http://127.0.0.1:3000@https://${ddev_hostname}@g" playwright.config.ts && popd
-    fi
-fi
+pushd $DDEV_APPROOT/test/playwright && npx --yes @1xinternet/create-dxp-playwight --lang=Javascript --quiet
 
 echo -e "\n${CYAN}Please check above for any comments/errors: you might have to run 'npx  to test/playwright\n\n"
 echo -e "${GREEN}To run tests change to 'test/playwright/' directory ('cd $DDEV_APPROOT/test/playwright/') and run 'npx playwright test example'\n"
