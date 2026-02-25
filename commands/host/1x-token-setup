@@ -130,9 +130,9 @@ if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
     REPLY=${REPLY:-Y}
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         ddev exec "cat \$HOME/.composer/auth.json" > ~/.composer/auth.json
-        echo "Composer config updated."
+        echo "Host Composer config updated."
     else
-        echo "Composer config was not changed."
+        echo "Host Composer config was not changed."
     fi
 else
     echo "NOTE: Skipping host Composer config update (non-interactive mode)."
@@ -157,9 +157,9 @@ if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
     REPLY=${REPLY:-Y}
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
-        echo "NPM config updated."
+        echo "Host NPM config updated."
     else
-        echo "NPM config was not changed."
+        echo "Host NPM config was not changed."
     fi
 else
     echo "NOTE: Skipping host NPM config update (non-interactive mode)."
