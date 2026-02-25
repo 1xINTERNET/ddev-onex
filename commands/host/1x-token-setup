@@ -115,36 +115,55 @@ ddev composer config --global --auth gitlab-token.git.1xinternet.de "${PERSONAL_
 # ddev exec 'cat $HOME/.npmrc' > ~/.npmrc
 
 if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
-    read -p "Please confirm to set $PERSONAL_ACCESS_TOKEN as token on HOST in ~/.composer/auth.json (Y/n): " -n 1 -r REPLY
+    echo
+    echo "We can now update the Composer config on your host machine"
+    echo "to make this change persistent."
+    echo
+    echo "Note:"
+    echo "This will replace your existing Composer config file"
+    echo "(~/.composer/auth.json)."
+    echo "Any custom settings or additional tokens in that file"
+    echo "will be overwritten."
+    echo
+    read -p "Update the Composer config on your host machine? (Y/n): " -n 1 -r REPLY
+    echo
     REPLY=${REPLY:-Y}
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Operation cancelled."
-    else
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         ddev exec "cat \$HOME/.composer/auth.json" > ~/.composer/auth.json
+        echo "Composer config updated."
+    else
+        echo "Composer config was not changed."
     fi
 else
-    # Let's not do this without a -y toggle
-    # ddev exec "cat \$HOME/.composer/auth.json" > ~/.composer/auth.json
-    echo "NOTE: Skipping - ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json"
+    echo "NOTE: Skipping host Composer config update (non-interactive mode)."
 fi
 
 # Verify it directly from your host using ddev exec:
 echo "Verifying .npmrc"
 ddev exec "cat \$HOME/.npmrc"
 if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
-    read -p "Please confirm to set $PERSONAL_ACCESS_TOKEN as token on HOST in ~/.npmrc (Y/n): " -n 1 -r REPLY
+    echo
+    echo "We can now update the NPM config on your host machine"
+    echo "to make this change persistent."
+    echo
+    echo "Note:"
+    echo "This will replace your existing NPM config file"
+    echo "(~/.npmrc)."
+    echo "Any custom settings in that file"
+    echo "will be overwritten."
+    echo
+    read -p "Update the NPM config on your host machine? (Y/n): " -n 1 -r REPLY
+    echo
     REPLY=${REPLY:-Y}
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Operation cancelled."
-    else
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
+        echo "NPM config updated."
+    else
+        echo "NPM config was not changed."
     fi
 else
-    # Let's not do this without a -y toggle
-    # ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
-    echo "NOTE: Skipping - ddev exec cat \$HOME/.npmrc > ~/.npmrc"
+    echo "NOTE: Skipping host NPM config update (non-interactive mode)."
 fi
-
 
 # Restart so everything is fully synced.
 ddev stop
