@@ -109,16 +109,64 @@ ddev exec "cat \$HOME/.composer/auth.json"
 # Now safely configure Composer with your GitLab token globally (in the container):
 ddev composer config --global --auth gitlab-token.git.1xinternet.de "${PERSONAL_ACCESS_TOKEN}"
 
-# @todo: Verify .npmrc
-# ddev exec "cat \$HOME/.npmrc" or ddev exec "npm config get"
+# Persist the new .composer/auth.json and .npmrc from the container back to your host (if desired):
+# @todo Be respectful: make sure this is desired and we don't just overwrite stuff on the host.
+# ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json
+# ddev exec 'cat $HOME/.npmrc' > ~/.npmrc
+
+if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
+    echo
+    echo "We can now update the Composer config on your host machine"
+    echo "to make this change persistent."
+    echo
+    echo "Note:"
+    echo "This will replace your existing Composer config file"
+    echo "(~/.composer/auth.json)."
+    echo "Any custom settings or additional tokens in that file"
+    echo "will be overwritten."
+    echo
+    read -p "Update the Composer config on your host machine? (Y/n): " -n 1 -r REPLY
+    echo
+    REPLY=${REPLY:-Y}
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        ddev exec "cat \$HOME/.composer/auth.json" > ~/.composer/auth.json
+        echo "Host Composer config updated."
+    else
+        echo "Host Composer config was not changed."
+    fi
+else
+    echo "NOTE: Skipping host Composer config update (non-interactive mode)."
+fi
+
+# Verify it directly from your host using ddev exec:
+echo "Verifying .npmrc"
+ddev exec "cat \$HOME/.npmrc"
+if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
+    echo
+    echo "We can now update the NPM config on your host machine"
+    echo "to make this change persistent."
+    echo
+    echo "Note:"
+    echo "This will replace your existing NPM config file"
+    echo "(~/.npmrc)."
+    echo "Any custom settings in that file"
+    echo "will be overwritten."
+    echo
+    read -p "Update the NPM config on your host machine? (Y/n): " -n 1 -r REPLY
+    echo
+    REPLY=${REPLY:-Y}
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
+        echo "Host NPM config updated."
+    else
+        echo "Host NPM config was not changed."
+    fi
+else
+    echo "NOTE: Skipping host NPM config update (non-interactive mode)."
+fi
 
 # Restart so everything is fully synced.
 ddev stop
 ddev start
 
 echo "Setup complete!"
-
-# Persist the new .composer/auth.json and .npmrc from the container back to your host (if desired):
-# @todo Be respectful: make sure this is desired and we don't just overwrite stuff on the host.
-# ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json
-# ddev exec 'cat $HOME/.npmrc' > ~/.npmrc
