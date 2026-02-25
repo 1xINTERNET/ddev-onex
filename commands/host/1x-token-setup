@@ -82,7 +82,7 @@ else
     # "In-place editing" works also for symlinks on Linux, but for consistency's sake.
     sed -i '/\/\/git.1xinternet.de\/api\/v4\/packages\/npm\/:_authToken=/d' ~/.npmrc
 fi
-echo "//git.1xinternet.de/api/v4/packages/npm/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
+echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
