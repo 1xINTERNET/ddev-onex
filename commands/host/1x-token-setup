@@ -109,16 +109,45 @@ ddev exec "cat \$HOME/.composer/auth.json"
 # Now safely configure Composer with your GitLab token globally (in the container):
 ddev composer config --global --auth gitlab-token.git.1xinternet.de "${PERSONAL_ACCESS_TOKEN}"
 
-# @todo: Verify .npmrc
-# ddev exec "cat \$HOME/.npmrc" or ddev exec "npm config get"
+# Persist the new .composer/auth.json and .npmrc from the container back to your host (if desired):
+# @todo Be respectful: make sure this is desired and we don't just overwrite stuff on the host.
+# ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json
+# ddev exec 'cat $HOME/.npmrc' > ~/.npmrc
+
+if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
+    read -p "Please confirm to set $PERSONAL_ACCESS_TOKEN as token on HOST in ~/.composer/auth.json (Y/n): " -n 1 -r REPLY
+    REPLY=${REPLY:-Y}
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Operation cancelled."
+    else
+        ddev exec "cat \$HOME/.composer/auth.json" > ~/.composer/auth.json
+    fi
+else
+    # Let's not do this without a -y toggle
+    # ddev exec "cat \$HOME/.composer/auth.json" > ~/.composer/auth.json
+    echo "NOTE: Skipping - ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json"
+fi
+
+# Verify it directly from your host using ddev exec:
+echo "Verifying .npmrc"
+ddev exec "cat \$HOME/.npmrc"
+if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
+    read -p "Please confirm to set $PERSONAL_ACCESS_TOKEN as token on HOST in ~/.npmrc (Y/n): " -n 1 -r REPLY
+    REPLY=${REPLY:-Y}
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Operation cancelled."
+    else
+        ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
+    fi
+else
+    # Let's not do this without a -y toggle
+    # ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
+    echo "NOTE: Skipping - ddev exec cat \$HOME/.npmrc > ~/.npmrc"
+fi
+
 
 # Restart so everything is fully synced.
 ddev stop
 ddev start
 
 echo "Setup complete!"
-
-# Persist the new .composer/auth.json and .npmrc from the container back to your host (if desired):
-# @todo Be respectful: make sure this is desired and we don't just overwrite stuff on the host.
-# ddev exec 'cat $HOME/.composer/auth.json' > ~/.composer/auth.json
-# ddev exec 'cat $HOME/.npmrc' > ~/.npmrc
