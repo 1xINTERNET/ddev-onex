@@ -25,13 +25,17 @@ echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
 ddev add-on get lullabot/ddev-playwright
 ddev restart
 
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 # Make sure we have a test/playwright-folder.
 ddev exec -d /var/www/html/ "mkdir -p test/playwright"
 # Empty JSON so the `ddev install-playwright` actually installs.
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 ddev exec -d /var/www/html/test/playwright 'echo "{}" > ./package.json'
 
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 # Install playwright *inside* the ddev container (see lullabot/ddev-playwright)
 ddev install-playwright
 
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
 ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --lang=Javascript --quiet"
