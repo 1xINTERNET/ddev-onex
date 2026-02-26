@@ -7,17 +7,11 @@
 start=`date +%s`
 
 # Colors for printing messages.
-RED='\033[0;31m'
-CYAN='\033[0;36m'
 GREEN='\033[0;32m'
-BROWN='\033[0;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
-ddev add-on get lullabot/ddev-playwright
-ddev restart
-
-ddev exec -d /var/www/html/ "mkdir -p test/playwright"
+# Make sure the container is alive.
+ddev start
 
 # Let's make sure @dxp-scoped package registry is defined as it required in the starterkit below.
 DXP_REGISTRY=$(ddev exec "npm config get @dxp:registry")
@@ -27,8 +21,21 @@ if [ -z "$DXP_REGISTRY" ] ; then
     exit 1
 fi
 
-# Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-ddev exec -d /var/www/html/test/playwright "npx --yes @1xinternet/create-dxp-playwright --lang=Javascript --quiet"
+echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
+ddev add-on get lullabot/ddev-playwright
+ddev restart
 
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
+# Make sure we have a test/playwright-folder.
+ddev exec -d /var/www/html/ "mkdir -p test/playwright"
+# Empty JSON so the `ddev install-playwright` actually installs.
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
+ddev exec -d /var/www/html/test/playwright 'echo "{}" > ./package.json'
+
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 # Install playwright *inside* the ddev container (see lullabot/ddev-playwright)
 ddev install-playwright
+
+[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
+# Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
+ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --lang=Javascript --quiet"
