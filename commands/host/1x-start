@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #ddev-generated
 ## Description: Starts the ddev project, runs auth and makes sure the .gitconfig is present.
 ## Usage: 1x-start

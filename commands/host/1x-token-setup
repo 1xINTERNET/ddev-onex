@@ -1,9 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ## #ddev-generated
 # Description: Setup GitLab tokens, composer gitlab tokens as well as npm gitlab tokens and npm scoped packages.
 # Usage: 1x-token-setup
 
 set -e
+
+source "${BASH_SOURCE%/*}/1x-lib.sh"
 
 # Stop the current DDEV project (if running).
 if ddev describe > /dev/null 2>&1; then
@@ -74,26 +76,19 @@ fi
 # Setup token for NPM
 # Remove old token if exists to replace with new one, or just append
 # A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
-# Make this work on MacOS and Linux >.<
-if [[ $OSTYPE == darwin* ]]; then
-    # "in-place editing only works for regular files" thus change directly ~/.npmrc
-    sed -i '' '/\/\/git.1xinternet.de\/:_authToken=/d' ~/.npmrc
-else
-    # "In-place editing" works also for symlinks on Linux, but for consistency's sake.
-    sed -i '/\/\/git.1xinternet.de\/:_authToken=/d' ~/.npmrc
-fi
-echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
+sed_compat -i '/\/\/git.1xinternet.de\/.*:_authToken=/d' ~/.npmrc
+echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.npmrc
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
-if ! grep -q "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
-    echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
+if ! grep -q "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" ~/.npmrc; then
+    echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.npmrc
 fi
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
-if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/group/1121/-/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
-    echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
+if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" ~/.npmrc; then
+    echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.npmrc
 fi
 
 # Start the DDEV project (so containers run).

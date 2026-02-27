@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ## #ddev-generated
 ## Description: Run lullabot/ddev-playwright commands in a slightly more sane way :)
@@ -6,14 +6,9 @@
 ## Usage: 1x-playwright
 ## OSTypes: darwin,linux
 
-start=`date +%s`
+source "${BASH_SOURCE%/*}/1x-lib.sh"
 
-# Colors for printing messages.
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-BROWN='\033[0;33m'
-NC='\033[0m' # No Color
+start=`date_compat +%s`
 
 if ! command -v jq 2>&1 >/dev/null
 then
@@ -39,7 +34,7 @@ else
       host=$(ddev_hostname)
       playwright_report_url="https://${host}:9324"
       # Note: playwright "report server" hangs.
-      sleep 1 && open $playwright_report_url & jobs
+      sleep 1 && open_compat $playwright_report_url & jobs
       ddev playwright test "${@:2} --ui-host=0.0.0.0 --ui-port=9323"
       ;;
 
@@ -47,7 +42,7 @@ else
       host=$(ddev_hostname)
       kasmvnc_url="https://${host}:8444"
       echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
-      sleep 1 && open $kasmvnc_url & jobs
+      sleep 1 && open_compat $kasmvnc_url & jobs
       ddev playwright codegen "${@:2}"
       ;;
 
@@ -62,7 +57,7 @@ else
       host=$(ddev_hostname)
       playwright_report_url="https://${host}:9324"
       # Note: playwright "report server" hangs.
-      sleep 1 && open $playwright_report_url & jobs
+      sleep 1 && open_compat $playwright_report_url & jobs
       ddev playwright show-report --host=0.0.0.0
       ;;
 
@@ -70,7 +65,7 @@ else
       host=$(ddev_hostname)
       kasmvnc_url="https://${host}:8444"
       # Note: playwright "ff|cr|wk" hangs.
-      sleep 1 && open $kasmvnc_url & jobs
+      sleep 1 && open_compat $kasmvnc_url & jobs
       echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
       ddev playwright "$1" "${@:2}"
       ;;
@@ -79,7 +74,7 @@ else
       host=$(ddev_hostname)
       kasmvnc_url="https://${host}:8444"
       # Note: playwright "ff|cr|wk" hangs.
-      sleep 1 && open $kasmvnc_url & jobs
+      sleep 1 && open_compat $kasmvnc_url & jobs
       echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
       ddev playwright "$1" "${@:2}"
       ;;
@@ -88,7 +83,7 @@ else
       host=$(ddev_hostname)
       kasmvnc_url="https://${host}:8444"
       # Note: playwright "ff|cr|wk" hangs.
-      sleep 1 && open $kasmvnc_url & jobs
+      sleep 1 && open_compat $kasmvnc_url & jobs
       echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
       ddev playwright "$1" "${@:2}"
       ;;
@@ -97,7 +92,7 @@ else
       host=$(ddev_hostname)
       kasmvnc_url="https://${host}:8444"
       echo "Please note - if asked for authentication login is your username on the host (`whoami`) and the password is 'secret' (without the ')"
-      open $kasmvnc_url
+      open_compat $kasmvnc_url
       ;;
 
     *)

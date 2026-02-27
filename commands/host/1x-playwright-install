@@ -1,14 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ## #ddev-generated
 ## Description: Install the lullabot/ddev-playwright addon and does some basic onex config.
 ## Usage: 1x-playwright-install
 
-start=`date +%s`
+source "${BASH_SOURCE%/*}/1x-lib.sh"
 
-# Colors for printing messages.
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+start=`date_compat +%s`
 
 # Make sure the container is alive.
 ddev start
