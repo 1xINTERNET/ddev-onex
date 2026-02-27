@@ -6,6 +6,14 @@
 #
 # No ## Usage: header, so DDEV will not register this as a command.
 
+# Colors for printing messages.
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BROWN='\033[0;33m'
+NC='\033[0m' # No Color
+
 # Cross-platform "sed"
 sed_compat() {
   case "$OSTYPE" in

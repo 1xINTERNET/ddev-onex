@@ -10,13 +10,6 @@ source "${BASH_SOURCE%/*}/1x-lib.sh"
 
 start=`date +%s`
 
-# Colors for printing messages.
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-BROWN='\033[0;33m'
-NC='\033[0m' # No Color
-
 if ! command -v jq 2>&1 >/dev/null
 then
   echo "Notice: jq command not found. Consider installing jq locally, using dockerized jq."
