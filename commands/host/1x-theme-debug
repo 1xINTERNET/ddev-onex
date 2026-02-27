@@ -4,6 +4,8 @@
 ## Usage: 1x-theme-debug
 ## Example: "ddev 1x-theme-debug (enable|disable)"
 
+source "${BASH_SOURCE%/*}/1x-lib.sh"
+
 settings_dir="${DDEV_APPROOT}/${DDEV_DOCROOT}/sites/default"
 settings_local="settings.local.php"
 debug_services="services.theme_debug.yml"
@@ -49,11 +51,7 @@ preflight() {
   fi
 
   # Delete the config always, so that enabling twice doesn't add it multiple times.
-  if [[ $OSTYPE == darwin* ]]; then
-    sed -i '' '/^#.*DO NOT WRITE ANYTHING BELOW THIS LINE/,$d' "${settings_dir}/${settings_local}"
-  else
-    sed -i '/^#.*DO NOT WRITE ANYTHING BELOW THIS LINE/,$d' "${settings_dir}/${settings_local}"
-  fi
+  sed_compat -i '/^#.*DO NOT WRITE ANYTHING BELOW THIS LINE/,$d' "${settings_dir}/${settings_local}"
 }
 
 enable_debug() {
@@ -64,11 +62,7 @@ enable_debug() {
   echo "${debug_settings_php}" > "${settings_dir}/${debug_settings}"
 
   # Make sure the file ends with a new line
-  if [[ $OSTYPE == darwin* ]]; then
-    sed -i '' '$a\' "${settings_dir}/${settings_local}"
-  else
-    sed -i '$a\' "${settings_dir}/${settings_local}"
-  fi
+  sed_compat -i '$a\' "${settings_dir}/${settings_local}"
   echo -e "${debug_config_php}" >> "${settings_dir}/${settings_local}"
 }
 

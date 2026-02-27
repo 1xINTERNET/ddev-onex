@@ -5,6 +5,8 @@
 
 set -e
 
+source "${BASH_SOURCE%/*}/1x-lib.sh"
+
 # Stop the current DDEV project (if running).
 if ddev describe > /dev/null 2>&1; then
     ddev stop
@@ -74,14 +76,7 @@ fi
 # Setup token for NPM
 # Remove old token if exists to replace with new one, or just append
 # A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
-# Make this work on MacOS and Linux >.<
-if [[ $OSTYPE == darwin* ]]; then
-    # "in-place editing only works for regular files" thus change directly ~/.npmrc
-    sed -i '' '/\/\/git.1xinternet.de\/:_authToken=/d' ~/.npmrc
-else
-    # "In-place editing" works also for symlinks on Linux, but for consistency's sake.
-    sed -i '/\/\/git.1xinternet.de\/:_authToken=/d' ~/.npmrc
-fi
+sed_compat -i '/\/\/git.1xinternet.de\/:_authToken=/d' ~/.npmrc
 echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
 
 # Configure NPM in homeadditions so the container picks it up.
