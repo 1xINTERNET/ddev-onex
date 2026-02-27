@@ -77,7 +77,7 @@ fi
 # Remove old token if exists to replace with new one, or just append
 # A simple append might create duplicates, so let's try to be a bit smarter or just append as requested
 sed_compat -i '/\/\/git.1xinternet.de\/.*:_authToken=/d' ~/.npmrc
-echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.ddev/homeadditions/.npmrc
+echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.npmrc
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
