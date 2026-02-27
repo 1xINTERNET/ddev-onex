@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ## #ddev-generated
 ## Description: Enables or disables Twig debugging for Drupal 10 installations
 ## Usage: 1x-twig-debug

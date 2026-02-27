@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ## #ddev-generated
 ## Description: manage php config options
 ## Usage: 1x-theme-debug

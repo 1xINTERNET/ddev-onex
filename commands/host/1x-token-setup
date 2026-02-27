@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ## #ddev-generated
 # Description: Setup GitLab tokens, composer gitlab tokens as well as npm gitlab tokens and npm scoped packages.
 # Usage: 1x-token-setup

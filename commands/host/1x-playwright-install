@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ## #ddev-generated
 ## Description: Install the lullabot/ddev-playwright addon and does some basic onex config.
