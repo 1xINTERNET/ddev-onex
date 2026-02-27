@@ -8,7 +8,7 @@
 
 source "${BASH_SOURCE%/*}/1x-lib.sh"
 
-start=`date +%s`
+start=`date_compat +%s`
 
 if ! command -v jq 2>&1 >/dev/null
 then

@@ -6,7 +6,7 @@
 
 source "${BASH_SOURCE%/*}/1x-lib.sh"
 
-start=`date +%s`
+start=`date_compat +%s`
 
 # Make sure the container is alive.
 ddev start
