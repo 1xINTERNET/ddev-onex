@@ -81,14 +81,14 @@ echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.npmrc
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
-if ! grep -q "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
-    echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
+if ! grep -q "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" ~/.npmrc; then
+    echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.npmrc
 fi
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
-if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
-    echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
+if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" ~/.npmrc; then
+    echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.npmrc
 fi
 
 # Start the DDEV project (so containers run).
