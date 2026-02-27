@@ -87,7 +87,7 @@ fi
 
 # Configure NPM in homeadditions so the container picks it up.
 # We append if not already present to avoid duplication
-if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/group/1121/-/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
+if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" ~/.ddev/homeadditions/.npmrc; then
     echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.ddev/homeadditions/.npmrc
 fi
 
