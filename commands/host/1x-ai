@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+## #ddev-generated
+## Description: 1X AI integration
+## Usage: 1x-ai
+## Example: "ddev 1x-ai --help"
+
+## @todo: Check whether to run inside container. @see https://github.com/e0ipso/ddev-assistant-claude
+
+## @todo: check for npm/npx installed
+if ! command -v npm 2>&1 >/dev/null
+then
+  echo "Notice: npm (node) not found."
+  exit 1
+fi
+
+## @todo: check for @1xINTERNET token
+# Let's make sure @dxp-scoped package registry is defined as it required in the starterkit below.
+ONEX_REGISTRY=$(npm config get @1xINTERNET:registry)
+
+if [ -z "$ONEX_REGISTRY" ] || [ "$ONEX_REGISTRY" = "none" ] || [ "$ONEX_REGISTRY" = "undefined" ] ; then
+    echo "The @1xINTERNET-scope is not configured one the host. Consider running the command 'ddev 1x-token-setup'!"
+    exit 1
+fi
+
+
+## Run 1x-ai
+npx @1xINTERNET/1x-ai@latest "${@:1}"
