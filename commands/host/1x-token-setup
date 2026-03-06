@@ -23,11 +23,19 @@ fi
 touch ~/.npmrc
 
 # Symlink your local config into DDEV's homeadditions
-# Using -f to force overwrite if symlink exists
-# Symlink directory:
-ln -sf "$(realpath ~/.composer)" ~/.ddev/homeadditions
-# Symlink file:
-ln -sf "$(realpath ~/.npmrc)"    ~/.ddev/homeadditions/.npmrc
+# Only replace if it's not already a symlink pointing to the right target.
+COMPOSER_TARGET="$(realpath ~/.composer)"
+if [ "$(readlink ~/.ddev/homeadditions/.composer 2>/dev/null)" != "$COMPOSER_TARGET" ]; then
+    if [ -e ~/.ddev/homeadditions/.composer ]; then
+        echo "Warning: replacing existing ~/.ddev/homeadditions/.composer with symlink to $COMPOSER_TARGET"
+    fi
+    rm -rf ~/.ddev/homeadditions/.composer
+    ln -s "$COMPOSER_TARGET" ~/.ddev/homeadditions/.composer
+fi
+NPMRC_TARGET="$(realpath ~/.npmrc)"
+if [ "$(readlink ~/.ddev/homeadditions/.npmrc 2>/dev/null)" != "$NPMRC_TARGET" ]; then
+    ln -sf "$NPMRC_TARGET" ~/.ddev/homeadditions/.npmrc
+fi
 
 # Set your personal access token
 # Check if PERSONAL_ACCESS_TOKEN is set, otherwise try to get it from composer
@@ -62,8 +70,12 @@ if [ ! -z "$PERSONAL_ACCESS_TOKEN" ]; then
     fi
 fi
 
-# If still not set, prompt the user
+# If still not set, prompt the user (only in interactive mode)
 if [ -z "$PERSONAL_ACCESS_TOKEN" ]; then
+    if [ -n "$DDEV_NON_INTERACTIVE" ] && [ "$DDEV_NON_INTERACTIVE" != "0" ]; then
+        echo "Error: PERSONAL_ACCESS_TOKEN is required. Pass it as an environment variable in non-interactive mode."
+        exit 1
+    fi
     echo "Please enter your GitLab Personal Access Token (must have read_api & read_repository):"
     read -s PERSONAL_ACCESS_TOKEN
 fi
