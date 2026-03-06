@@ -100,6 +100,9 @@ echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/"
 sed_compat -i '/@1xINTERNET:registry=/d' ~/.npmrc
 echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.npmrc
 
+sed_compat -i '/@1xinternet:registry=/d' ~/.npmrc
+echo "@1xinternet:registry=https://git.1xinternet.de/api/v4/groups/4/-/packages/npm/" >> ~/.npmrc
+
 # Start the DDEV project (so containers run).
 ddev start
 
