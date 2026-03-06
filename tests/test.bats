@@ -46,5 +46,5 @@ teardown() {
     [ "$output" = "https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" ]
   run ddev exec "grep '=123' ~/.npmrc"
     [ "$status" -eq 0 ]
-    [ "$output" = "//git.1xinternet.de/api/v4/packages/npm/:_authToken=123" ]
+    [ "$output" = "//git.1xinternet.de/:_authToken=123" ]
  }
