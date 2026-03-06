@@ -35,7 +35,7 @@ else
       playwright_report_url="https://${host}:9324"
       # Note: playwright "report server" hangs.
       sleep 1 && open_compat $playwright_report_url & jobs
-      ddev playwright test "${@:2} --ui-host=0.0.0.0 --ui-port=9323"
+      ddev playwright test "${@:2}" --ui-host=0.0.0.0 --ui-port=9323
       ;;
 
     "codegen")
