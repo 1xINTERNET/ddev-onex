@@ -141,32 +141,9 @@ else
     echo "NOTE: Skipping host Composer config update (non-interactive mode)."
 fi
 
-# Verify it directly from your host using ddev exec:
+# Verify .npmrc in container (already written to host directly, no need to persist back).
 echo "Verifying .npmrc"
 ddev exec "cat \$HOME/.npmrc"
-if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
-    echo
-    echo "We can now update the NPM config on your host machine"
-    echo "to make this change persistent."
-    echo
-    echo "Note:"
-    echo "This will replace your existing NPM config file"
-    echo "(~/.npmrc)."
-    echo "Any custom settings in that file"
-    echo "will be overwritten."
-    echo
-    read -p "Update the NPM config on your host machine? (Y/n): " -n 1 -r REPLY
-    echo
-    REPLY=${REPLY:-Y}
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
-        echo "Host NPM config updated."
-    else
-        echo "Host NPM config was not changed."
-    fi
-else
-    echo "NOTE: Skipping host NPM config update (non-interactive mode)."
-fi
 
 # Restart so everything is fully synced.
 ddev restart
