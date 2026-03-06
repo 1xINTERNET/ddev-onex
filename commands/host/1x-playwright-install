@@ -14,7 +14,7 @@ ddev start
 # Let's make sure @dxp-scoped package registry is defined as it required in the starterkit below.
 DXP_REGISTRY=$(ddev exec "npm config get @dxp:registry")
 
-if [ -z "$DXP_REGISTRY" ] ; then
+if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
     echo "The @dxp-scope is not configured inside the container aborting. Consider running the command 'ddev 1x-token-setup'!"
     exit 1
 fi
