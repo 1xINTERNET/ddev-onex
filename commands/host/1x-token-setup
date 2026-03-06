@@ -161,7 +161,6 @@ else
 fi
 
 # Restart so everything is fully synced.
-ddev stop
-ddev start
+ddev restart
 
 echo "Setup complete!"
