@@ -2,7 +2,7 @@
 #ddev-generated
 ## Description: Starts the ddev project, runs auth and makes sure the .gitconfig is present.
 ## Usage: 1x-start
-if [ ! -f $DDEV_APPROOT/.ddev/homeadditions/.gitconfig ]
+if [ ! -e $DDEV_APPROOT/.ddev/homeadditions/.gitconfig ]
 then
     if [  -f ~/.gitconfig ]
     then
