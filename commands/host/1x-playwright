@@ -29,13 +29,19 @@ if [ -z "${playwright_installed_inside_ddev}" ]; then
   npx playwright "${@:1}"
 else
   echo "Note: Using playwright inside ddev container!"
+  DXP_REGISTRY=$(ddev exec "npm config get @dxp:registry")
+  if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
+    echo "Error: The @dxp npm scope is not configured inside the container."
+    echo "Please run 'ddev 1x-token-setup' first to configure your GitLab token."
+    exit 1
+  fi
   case "$1" in
     "ui")
       host=$(ddev_hostname)
       playwright_report_url="https://${host}:9324"
       # Note: playwright "report server" hangs.
       sleep 1 && open_compat $playwright_report_url & jobs
-      ddev playwright test "${@:2} --ui-host=0.0.0.0 --ui-port=9323"
+      ddev playwright test "${@:2}" --ui-host=0.0.0.0 --ui-port=9323
       ;;
 
     "codegen")

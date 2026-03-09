@@ -23,11 +23,19 @@ fi
 touch ~/.npmrc
 
 # Symlink your local config into DDEV's homeadditions
-# Using -f to force overwrite if symlink exists
-# Symlink directory:
-ln -sf "$(realpath ~/.composer)" ~/.ddev/homeadditions
-# Symlink file:
-ln -sf "$(realpath ~/.npmrc)"    ~/.ddev/homeadditions/.npmrc
+# Only replace if it's not already a symlink pointing to the right target.
+COMPOSER_TARGET="$(realpath ~/.composer)"
+if [ "$(readlink ~/.ddev/homeadditions/.composer 2>/dev/null)" != "$COMPOSER_TARGET" ]; then
+    if [ -e ~/.ddev/homeadditions/.composer ]; then
+        echo "Warning: replacing existing ~/.ddev/homeadditions/.composer with symlink to $COMPOSER_TARGET"
+    fi
+    rm -rf ~/.ddev/homeadditions/.composer
+    ln -s "$COMPOSER_TARGET" ~/.ddev/homeadditions/.composer
+fi
+NPMRC_TARGET="$(realpath ~/.npmrc)"
+if [ "$(readlink ~/.ddev/homeadditions/.npmrc 2>/dev/null)" != "$NPMRC_TARGET" ]; then
+    ln -sf "$NPMRC_TARGET" ~/.ddev/homeadditions/.npmrc
+fi
 
 # Set your personal access token
 # Check if PERSONAL_ACCESS_TOKEN is set, otherwise try to get it from composer
@@ -51,7 +59,8 @@ fi
 
 # If it is set now, prompt the user to confirm.
 if [ ! -z "$PERSONAL_ACCESS_TOKEN" ]; then
-    echo "Please note we've determined your 1xinternet gitlab token is: $PERSONAL_ACCESS_TOKEN"
+    MASKED_TOKEN="...${PERSONAL_ACCESS_TOKEN: -4}"
+    echo "Please note we've determined your 1xinternet gitlab token is: $MASKED_TOKEN"
     if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
       read -p "Please confirm to proceed with this token (Y/n): " -n 1 -r REPLY
       REPLY=${REPLY:-Y}
@@ -62,8 +71,12 @@ if [ ! -z "$PERSONAL_ACCESS_TOKEN" ]; then
     fi
 fi
 
-# If still not set, prompt the user
+# If still not set, prompt the user (only in interactive mode)
 if [ -z "$PERSONAL_ACCESS_TOKEN" ]; then
+    if [ -n "$DDEV_NON_INTERACTIVE" ] && [ "$DDEV_NON_INTERACTIVE" != "0" ]; then
+        echo "Error: PERSONAL_ACCESS_TOKEN is required. Pass it as an environment variable in non-interactive mode."
+        exit 1
+    fi
     echo "Please enter your GitLab Personal Access Token (must have read_api & read_repository):"
     read -s PERSONAL_ACCESS_TOKEN
 fi
@@ -79,17 +92,16 @@ fi
 sed_compat -i '/\/\/git.1xinternet.de\/.*:_authToken=/d' ~/.npmrc
 echo "//git.1xinternet.de/:_authToken=${PERSONAL_ACCESS_TOKEN}" >> ~/.npmrc
 
-# Configure NPM in homeadditions so the container picks it up.
-# We append if not already present to avoid duplication
-if ! grep -q "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" ~/.npmrc; then
-    echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.npmrc
-fi
+# Configure NPM scoped registries.
+# Remove any existing entries for these scopes first to avoid duplicates and stale URLs.
+sed_compat -i '/@dxp:registry=/d' ~/.npmrc
+echo "@dxp:registry=https://git.1xinternet.de/api/v4/groups/392/-/packages/npm/" >> ~/.npmrc
 
-# Configure NPM in homeadditions so the container picks it up.
-# We append if not already present to avoid duplication
-if ! grep -q "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" ~/.npmrc; then
-    echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.npmrc
-fi
+sed_compat -i '/@1xINTERNET:registry=/d' ~/.npmrc
+echo "@1xINTERNET:registry=https://git.1xinternet.de/api/v4/projects/1121/packages/npm/" >> ~/.npmrc
+
+sed_compat -i '/@1xinternet:registry=/d' ~/.npmrc
+echo "@1xinternet:registry=https://git.1xinternet.de/api/v4/groups/4/-/packages/npm/" >> ~/.npmrc
 
 # Start the DDEV project (so containers run).
 ddev start
@@ -133,35 +145,11 @@ else
     echo "NOTE: Skipping host Composer config update (non-interactive mode)."
 fi
 
-# Verify it directly from your host using ddev exec:
+# Verify .npmrc in container (already written to host directly, no need to persist back).
 echo "Verifying .npmrc"
 ddev exec "cat \$HOME/.npmrc"
-if [ -z "$DDEV_NON_INTERACTIVE" ] || [ "$DDEV_NON_INTERACTIVE" = "0" ]; then
-    echo
-    echo "We can now update the NPM config on your host machine"
-    echo "to make this change persistent."
-    echo
-    echo "Note:"
-    echo "This will replace your existing NPM config file"
-    echo "(~/.npmrc)."
-    echo "Any custom settings in that file"
-    echo "will be overwritten."
-    echo
-    read -p "Update the NPM config on your host machine? (Y/n): " -n 1 -r REPLY
-    echo
-    REPLY=${REPLY:-Y}
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        ddev exec "cat \$HOME/.npmrc" > ~/.npmrc
-        echo "Host NPM config updated."
-    else
-        echo "Host NPM config was not changed."
-    fi
-else
-    echo "NOTE: Skipping host NPM config update (non-interactive mode)."
-fi
 
 # Restart so everything is fully synced.
-ddev stop
-ddev start
+ddev restart
 
 echo "Setup complete!"
