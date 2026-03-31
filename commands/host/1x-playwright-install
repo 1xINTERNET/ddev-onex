@@ -24,7 +24,7 @@ ddev add-on get lullabot/ddev-playwright --version 0.5.0
 ddev restart
 
 # Only create an empty package.json if it doesn't exist.
-if [ ! -f $DDEV_APPROOT/test/playwright/package.json ]; then
+if [ ! -f "$DDEV_APPROOT/test/playwright/package.json" ]; then
     [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
     # Make sure we have a test/playwright-folder.
     ddev exec -d /var/www/html/ "mkdir -p test/playwright"
@@ -39,7 +39,7 @@ ddev install-playwright
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 
-if [ ! -f $DDEV_APPROOT/test/playwright/package-lock.json ]; then
+if [ ! -f "$DDEV_APPROOT/test/playwright/package-lock.json" ]; then
     # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
     ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet"
 else
