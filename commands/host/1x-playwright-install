@@ -20,7 +20,7 @@ if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
 fi
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
-ddev add-on get lullabot/ddev-playwright --version 0.5.2
+ddev add-on get lullabot/ddev-playwright --version v0.5.2
 ddev restart
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
