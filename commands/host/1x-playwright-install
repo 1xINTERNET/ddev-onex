@@ -36,4 +36,4 @@ ddev install-playwright
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.57' --quiet"
+ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet"
