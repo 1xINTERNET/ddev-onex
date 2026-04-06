@@ -20,7 +20,7 @@ if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
 fi
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
-ddev add-on get lullabot/ddev-playwright --version 0.5.0
+ddev add-on get lullabot/ddev-playwright --version v0.5.2
 ddev restart
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
@@ -36,4 +36,4 @@ ddev install-playwright
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.57' --quiet"
+ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet"
