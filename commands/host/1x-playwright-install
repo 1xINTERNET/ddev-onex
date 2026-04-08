@@ -35,7 +35,17 @@ if [ -f "${DDEV_APPROOT}/test/playwright/package-lock.json" ]; then
 fi
 
 mkdir -p "${DDEV_APPROOT}/test/playwright"
-echo '{}' > "${DDEV_APPROOT}/test/playwright/package.json"
+PACKAGE_FILE="${DDEV_APPROOT}/test/playwright/package.json"
+if [ -f "$PACKAGE_FILE" ]; then
+    # Strip private @dxp/* and @1xinternet/* packages from the package.json
+    docker run --rm -i ghcr.io/jqlang/jq \
+        'def strip: with_entries(select(.key | test("^@(dxp|1xinternet)/") | not));
+         if .devDependencies then .devDependencies |= strip else . end |
+         if .dependencies then .dependencies |= strip else . end' \
+        < "$PACKAGE_FILE" > "$PACKAGE_FILE.tmp" && mv "$PACKAGE_FILE.tmp" "$PACKAGE_FILE"
+else
+    echo '{}' > "$PACKAGE_FILE"
+fi
 rm -f "${DDEV_APPROOT}/test/playwright/package-lock.json"
 
 # Make sure the container is alive.
