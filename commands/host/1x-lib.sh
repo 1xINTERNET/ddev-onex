@@ -75,3 +75,15 @@ open_compat() {
       ;;
   esac
 }
+
+# Cross-platform "jq"
+jq_compat() {
+  if command -v jq >/dev/null 2>&1; then
+    jq "$@"
+  elif command -v docker >/dev/null 2>&1; then
+    docker run --rm -i ghcr.io/jqlang/jq "$@"
+  else
+    echo "Error: jq not found and docker is not available. Please install jq or docker." >&2
+    return 1
+  fi
+}

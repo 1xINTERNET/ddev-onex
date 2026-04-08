@@ -38,7 +38,7 @@ mkdir -p "${DDEV_APPROOT}/test/playwright"
 PACKAGE_FILE="${DDEV_APPROOT}/test/playwright/package.json"
 if [ -f "$PACKAGE_FILE" ]; then
     # Strip private @dxp/* and @1xinternet/* packages from the package.json
-    docker run --rm -i ghcr.io/jqlang/jq \
+    jq_compat \
         'def strip: with_entries(select(.key | test("^@(dxp|1xinternet)/") | not));
          if .devDependencies then .devDependencies |= strip else . end |
          if .dependencies then .dependencies |= strip else . end' \
