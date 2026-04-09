@@ -79,5 +79,5 @@ if [ "$HAS_EXISTING_PKG" = true ]; then
     echo "Restored original test/playwright/package.json."
 else
     # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.57' --quiet"
+    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet"
 fi
