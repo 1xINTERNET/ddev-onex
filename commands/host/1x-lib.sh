@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+## #ddev-generated
 #
 # Shared helper library for 1x DDEV host commands.
 # Source this from any 1x-* command with:
