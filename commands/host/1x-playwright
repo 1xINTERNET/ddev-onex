@@ -10,19 +10,11 @@ source "${BASH_SOURCE%/*}/1x-lib.sh"
 
 start=`date_compat +%s`
 
-if ! command -v jq 2>&1 >/dev/null
-then
-  echo "Notice: jq command not found. Consider installing jq locally, using dockerized jq."
-  jq_command='docker run --rm -i ghcr.io/jqlang/jq:latest'
-else
-  jq_command='jq'
-fi
-
 ddev_hostname () {
-  echo `ddev status -j | $jq_command -r '.["raw"]["hostnames"][0]'`
+  echo `ddev status -j | jq_compat -r '.["raw"]["hostnames"][0]'`
 }
 
-playwright_installed_inside_ddev=`ddev add-on list --installed -j | ${jq_command} -c '.raw[] | select(.Name | contains("playwright"))'`
+playwright_installed_inside_ddev=`ddev add-on list --installed -j | jq_compat -c '.raw[] | select(.Name | contains("playwright"))'`
 if [ -z "${playwright_installed_inside_ddev}" ]; then
   echo "Notice: Using playwright on host!"
   cd $DDEV_APPROOT/test/playwright

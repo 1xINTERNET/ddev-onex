@@ -8,6 +8,46 @@ source "${BASH_SOURCE%/*}/1x-lib.sh"
 
 start=`date_compat +%s`
 
+# Temporarily replace package.json/package-lock.json with empty {} before any
+# Docker build. The lullabot Dockerfile bind-mounts test/playwright/ and runs
+# npm install, which fails on private @dxp/* deps (no auth tokens in build context).
+# Must happen on the host before ddev start, since pre-start hooks copy
+# test/playwright/ into the build context.
+restore_package_files() {
+    if [ -f "${DDEV_APPROOT}/test/playwright/package.json.onex-backup" ]; then
+        mv "${DDEV_APPROOT}/test/playwright/package.json.onex-backup" "${DDEV_APPROOT}/test/playwright/package.json"
+    fi
+    if [ -f "${DDEV_APPROOT}/test/playwright/package-lock.json.onex-backup" ]; then
+        mv "${DDEV_APPROOT}/test/playwright/package-lock.json.onex-backup" "${DDEV_APPROOT}/test/playwright/package-lock.json"
+    fi
+}
+trap restore_package_files EXIT
+
+HAS_EXISTING_PKG=false
+HAS_EXISTING_LOCK=false
+if [ -f "${DDEV_APPROOT}/test/playwright/package.json" ]; then
+    HAS_EXISTING_PKG=true
+    cp "${DDEV_APPROOT}/test/playwright/package.json" "${DDEV_APPROOT}/test/playwright/package.json.onex-backup"
+fi
+if [ -f "${DDEV_APPROOT}/test/playwright/package-lock.json" ]; then
+    HAS_EXISTING_LOCK=true
+    cp "${DDEV_APPROOT}/test/playwright/package-lock.json" "${DDEV_APPROOT}/test/playwright/package-lock.json.onex-backup"
+fi
+
+mkdir -p "${DDEV_APPROOT}/test/playwright"
+PACKAGE_FILE="${DDEV_APPROOT}/test/playwright/package.json"
+if [ -f "$PACKAGE_FILE" ]; then
+    # Strip private @dxp/* and @1xinternet/* packages from the package.json
+    jq_compat \
+        'def strip: with_entries(select(.key | test("^@(dxp|1xinternet)/") | not));
+         if .devDependencies then .devDependencies |= strip else . end |
+         if .dependencies then .dependencies |= strip else . end' \
+        < "$PACKAGE_FILE" > "$PACKAGE_FILE.tmp" && mv "$PACKAGE_FILE.tmp" "$PACKAGE_FILE"
+else
+    echo '{}' > "$PACKAGE_FILE"
+fi
+rm -f "${DDEV_APPROOT}/test/playwright/package-lock.json"
+
 # Make sure the container is alive.
 ddev start
 
@@ -20,20 +60,24 @@ if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
 fi
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
-ddev add-on get lullabot/ddev-playwright --version 0.5.0
-ddev restart
+
+if [ ! -f "${DDEV_APPROOT}/.ddev/web-build/disabled.Dockerfile.playwright" ]; then
+    ddev add-on get lullabot/ddev-playwright --version 0.5.0
+    ddev restart
+else
+    echo "lullabot/ddev-playwright already installed, skipping."
+fi
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
-# Make sure we have a test/playwright-folder.
-ddev exec -d /var/www/html/ "mkdir -p test/playwright"
-# Empty JSON so the `ddev install-playwright` actually installs.
-[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
-ddev exec -d /var/www/html/test/playwright 'echo "{}" > ./package.json'
-
-[ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
-# Install playwright *inside* the ddev container (see lullabot/ddev-playwright)
+# Install playwright *inside* the ddev container (see lullabot/ddev-playwright).
 ddev install-playwright
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
-# Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.57' --quiet"
+
+# Restore original package files, or scaffold for fresh projects.
+if [ "$HAS_EXISTING_PKG" = true ]; then
+    echo "Restored original test/playwright/package.json."
+else
+    # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
+    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.57' --quiet"
+fi
