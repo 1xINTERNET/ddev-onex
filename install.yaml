@@ -60,7 +60,12 @@ pre_install_actions:
 # If you use directories, they must be directories that are managed
 # by this add-on, or removal could remove things that are not owned by it
 project_files:
-  - commands/
+  - commands/host/1x-lib.sh
+  - commands/host/1x-playwright
+  - commands/host/1x-playwright-install
+  - commands/host/1x-start
+  - commands/host/1x-token-setup
+  - commands/web/1x-phpcs
 
 # List of files and directories that are copied into the global .ddev directory
 # DDEV environment variables can be interpolated into these filenames
