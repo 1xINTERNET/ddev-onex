@@ -152,4 +152,6 @@ ddev exec "cat \$HOME/.npmrc"
 # Restart so everything is fully synced.
 ddev restart
 
+check_registry_auth
+
 echo "Setup complete!"
