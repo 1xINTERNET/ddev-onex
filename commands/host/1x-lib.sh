@@ -89,3 +89,17 @@ jq_compat() {
     return 1
   fi
 }
+
+# Exit with an error if the token in ~/.npmrc can't pull @dxp or @1xinternet packages.
+check_registry_auth() {
+  local token group
+  token=$(grep -im1 '^//git\.1xinternet\.de.*:_authToken=' ~/.npmrc 2>/dev/null | cut -d= -f2- | tr -d '[:space:]"')
+  # 392 = @dxp, 4 = @1xinternet
+  for group in 392 4; do
+    curl -fsS --max-time 5 -H "PRIVATE-TOKEN: $token" -o /dev/null \
+      "https://git.1xinternet.de/api/v4/groups/$group/packages?package_type=npm&per_page=1" \
+      && continue
+    echo "Error: GitLab token can't pull @dxp or @1xinternet packages." >&2
+    exit 1
+  done
+}
