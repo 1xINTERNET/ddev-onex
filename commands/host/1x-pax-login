@@ -13,7 +13,7 @@ fi
 mkdir -p "$dir/cache"
 if ! ddev exec test -w /mnt/pax/cache >/dev/null 2>&1; then
   echo "Reconnecting the credentials directory to the web container."
-  ddev restart >/dev/null 2>&1
+  ddev restart >/dev/null
 fi
 accepted() {
   ddev exec kubectl config view --kubeconfig "/mnt/pax/$1" -o json 2>/dev/null | tr -d '\r' | jq -e '
