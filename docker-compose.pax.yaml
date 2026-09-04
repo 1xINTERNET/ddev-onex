@@ -1,0 +1,7 @@
+#ddev-generated
+services:
+  web:
+    environment:
+      - KUBECONFIG=/mnt/pax/kubeconfig
+    volumes:
+      - ~/.config/1x-pax:/mnt/pax

@@ -51,3 +51,22 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "//git.1xinternet.de/:_authToken=123" ]
  }
+
+@test "1x-pax-login" {
+  set -eu -o pipefail
+  cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
+  echo "# ddev get ${DIR} with project ${PROJNAME} in ${TESTDIR} ($(pwd))" >&3
+  ddev get ${DIR}
+  ddev restart -y >/dev/null
+  [ -f .ddev/commands/host/1x-pax-login ]
+  [ -f .ddev/docker-compose.pax.yaml ]
+  run ddev exec "kubectl version --client"
+    [ "$status" -eq 0 ]
+  run ddev exec "kubectl-oidc_login --version"
+    [ "$status" -eq 0 ]
+  run ddev exec "test -x /usr/local/bin/pax-gke-token"
+    [ "$status" -eq 0 ]
+  run ddev exec "printenv KUBECONFIG"
+    [ "$status" -eq 0 ]
+    [ "$output" = "/mnt/pax/kubeconfig" ]
+}

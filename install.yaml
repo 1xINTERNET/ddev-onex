@@ -66,6 +66,10 @@ project_files:
   - commands/host/1x-start
   - commands/host/1x-token-setup
   - commands/web/1x-phpcs
+  - commands/host/1x-pax-login
+  - web-build/Dockerfile.pax
+  - web-build/pax-gke-token
+  - docker-compose.pax.yaml
 
 # List of files and directories that are copied into the global .ddev directory
 # DDEV environment variables can be interpolated into these filenames
