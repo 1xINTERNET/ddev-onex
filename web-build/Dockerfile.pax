@@ -1,0 +1,20 @@
+#ddev-generated
+ARG KUBECTL_VERSION=v1.35.2
+ARG KUBELOGIN_VERSION=v1.36.3
+RUN arch=$(dpkg --print-architecture) \
+  && case "$arch" in \
+       amd64) kubectl_sha=924eb50779153f20cb668117d141440b95df2f325a64452d78dff9469145e277; kubelogin_sha=54428b2be68ce297c5c743feed65a2fa2ed2a671881ff70fb6560e560bb18eaf ;; \
+       arm64) kubectl_sha=cd859449f54ad2cb05b491c490c13bb836cdd0886ae013c0aed3dd67ff747467; kubelogin_sha=c1502297738af4054507cc0675b54db1ebec67cedc32498028ba889906386462 ;; \
+       *) echo "unsupported architecture $arch" >&2; exit 1 ;; \
+     esac \
+  && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${arch}/kubectl" -o /usr/local/bin/kubectl \
+  && echo "${kubectl_sha}  /usr/local/bin/kubectl" | sha256sum -c - \
+  && chmod 0755 /usr/local/bin/kubectl \
+  && curl -fsSL "https://github.com/int128/kubelogin/releases/download/${KUBELOGIN_VERSION}/kubelogin_linux_${arch}.zip" -o /tmp/kubelogin.zip \
+  && echo "${kubelogin_sha}  /tmp/kubelogin.zip" | sha256sum -c - \
+  && unzip -q -o /tmp/kubelogin.zip kubelogin -d /usr/local/bin \
+  && mv /usr/local/bin/kubelogin /usr/local/bin/kubectl-oidc_login \
+  && chmod 0755 /usr/local/bin/kubectl-oidc_login \
+  && rm -f /tmp/kubelogin.zip
+COPY pax-gke-token /usr/local/bin/pax-gke-token
+RUN chmod 0755 /usr/local/bin/pax-gke-token
