@@ -12,7 +12,7 @@ if [ -e "$dir" ] && [ ! -w "$dir" ]; then
 fi
 mkdir -p "$dir/cache"
 if ! ddev exec test -w /mnt/pax/cache >/dev/null 2>&1; then
-  echo "Reconnecting the credentials directory to the web container."
+  echo "Reconnecting the credentials directory to the web container, other DDEV projects need a 'ddev restart' too."
   ddev restart >/dev/null
 fi
 cat > "$dir/.accepted.jq" <<'JQ'
