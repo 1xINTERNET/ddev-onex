@@ -44,7 +44,7 @@ else
   echo "No acceptable cluster list: download from $url failed and no valid copy exists." >&2
   exit 1
 fi
-rm -f "$dir"/pax-*
+rm -rf "$dir"/pax-* "$dir/cache"/*
 echo "Signing in to the 1pax platform with the company Google account."
 echo "If a link appears, open it, sign in, and paste the code you get afterwards."
 ddev exec sh -c 'kubectl-oidc_login get-token --oidc-issuer-url=https://keycloak.backbone.pax.1xinter.net/realms/pax --oidc-client-id=kubernetes --grant-type=authcode-keyboard --oidc-redirect-url=urn:ietf:wg:oauth:2.0:oob --token-cache-dir=/mnt/pax/cache >/dev/null'
@@ -85,5 +85,5 @@ if [ -z "$user" ]; then
 fi
 echo "Signed in as $user."
 echo "Access: ${access:-none granted yet, ask devops}."
-[ "$mismatch" = 0 ] || { echo "The clusters disagree about who you are, run the command again after clearing ~/.config/1x-pax/cache." >&2; exit 1; }
+[ "$mismatch" = 0 ] || { echo "The clusters disagree about who you are, run the command again." >&2; exit 1; }
 [ "$failed" = 0 ] || exit 1
