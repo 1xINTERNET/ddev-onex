@@ -6,8 +6,8 @@
 set -euo pipefail
 debug=false
 [ "${1:-}" = "--debug" ] && debug=true
-dir=~/.config/1x-pax
-if [ ! -w "$dir" ]; then
+dir=$HOME/.config/1x-pax
+if [ -e "$dir" ] && [ ! -w "$dir" ]; then
   ddev exec sudo chown -R "$(id -u):$(id -g)" /mnt/pax
 fi
 mkdir -p "$dir/cache"
@@ -15,60 +15,75 @@ if ! ddev exec test -w /mnt/pax/cache >/dev/null 2>&1; then
   echo "Reconnecting the credentials directory to the web container."
   ddev restart >/dev/null
 fi
+cat > "$dir/.accepted.jq" <<'JQ'
+(.clusters | length > 0) and all(.clusters[]; .cluster.server | test("^https://[a-z0-9.-]+(:[0-9]+)?$")) and
+(.users | length > 0) and all(.users[]; .user.exec != null) and
+all(.users[]; .user.exec.command == "kubectl-oidc_login" or .user.exec.command == "pax-gke-token") and
+all(.users[]; (.user.exec.args // []) | all(startswith("--") or . == "get-token")) and
+all(.users[]; (.user.exec.env // []) | all(.name == "PAX_GKE_TOKEN_CACHE")) and
+(.contexts | length > 0) and all(.contexts[]; .name | test("^pax-[a-z0-9-]+$")) and
+((.contexts | map(.name) | unique | length) == (.contexts | length)) and
+([.clusters[].name] as $c | [.users[].name] as $u | all(.contexts[]; .context.cluster as $x | .context.user as $y | ($c | index($x)) != null and ($u | index($y)) != null)) and
+((.["current-context"] // "") == "")
+JQ
 accepted() {
-  ddev exec kubectl config view --kubeconfig "/mnt/pax/$1" -o json 2>/dev/null | tr -d '\r' | jq -e '
-    (.clusters | length > 0) and all(.clusters[]; .cluster.server | test("^https://[a-z0-9.-]+(:[0-9]+)?$")) and
-    (.users | length > 0) and all(.users[]; .user.exec != null) and
-    all(.users[]; .user.exec.command == "kubectl-oidc_login" or .user.exec.command == "pax-gke-token") and
-    all(.users[]; (.user.exec.args // []) | all(startswith("--") or . == "get-token")) and
-    all(.users[]; (.user.exec.env // []) | all(.name == "PAX_GKE_TOKEN_CACHE")) and
-    ((.["current-context"] // "") == "")' >/dev/null 2>&1
+  if $debug; then
+    ddev exec "kubectl config view --kubeconfig /mnt/pax/$1 -o json | jq -e -f /mnt/pax/.accepted.jq >/dev/null"
+  else
+    ddev exec "kubectl config view --kubeconfig /mnt/pax/$1 -o json 2>/dev/null | jq -e -f /mnt/pax/.accepted.jq >/dev/null 2>&1" 2>/dev/null
+  fi
 }
 url=${PAX_KUBECONFIG_URL:-https://raw.githubusercontent.com/1xINTERNET/ddev-onex/main/pax/kubeconfig.yaml}
-if curl -fsSL "$url" -o "$dir/kubeconfig.new" 2>/dev/null && accepted kubeconfig.new; then
-  mv "$dir/kubeconfig.new" "$dir/kubeconfig"
+new=$(mktemp "$dir/kubeconfig.XXXXXX")
+trap 'rm -f "$new"' EXIT
+if curl -fsSL "$url" -o "$new" 2>/dev/null && accepted "$(basename "$new")"; then
+  mv -f "$new" "$dir/kubeconfig"
 elif [ -f "$dir/kubeconfig" ] && accepted kubeconfig; then
   echo "Could not refresh the cluster list from $url, using the last one." >&2
 else
   echo "No acceptable cluster list: download from $url failed and no valid copy exists." >&2
-  rm -f "$dir/kubeconfig.new"
   exit 1
 fi
-rm -f "$dir/kubeconfig.new"
+rm -f "$dir"/pax-*
 echo "Signing in to the 1pax platform with the company Google account."
 echo "If a link appears, open it, sign in, and paste the code you get afterwards."
 ddev exec sh -c 'kubectl-oidc_login get-token --oidc-issuer-url=https://keycloak.backbone.pax.1xinter.net/realms/pax --oidc-client-id=kubernetes --grant-type=authcode-keyboard --oidc-redirect-url=urn:ietf:wg:oauth:2.0:oob --token-cache-dir=/mnt/pax/cache >/dev/null'
 user=""
 access=""
-contexts=$(ddev exec kubectl config get-contexts -o name | tr -d '\r')
-for f in "$dir"/pax-*; do
-  [ -f "$f" ] || continue
-  grep -qx "$(basename "$f")" <<<"$contexts" || rm -f "$f"
-done
+failed=0
+mismatch=0
 echo
-for ctx in $contexts; do
+for ctx in $(ddev exec kubectl config get-contexts -o name | tr -d '\r'); do
   cluster=${ctx#pax-}
-  ddev exec kubectl config view --minify --raw --context "$ctx" | tr -d '\r' > "$dir/$ctx"
-  if info=$(ddev exec kubectl --context "$ctx" auth whoami -o json 2>/dev/null | tr -d '\r'); then
-    who=$(jq -r '.status.userInfo.username' <<<"$info" | sed 's#.*/subject/##')
+  if info=$(ddev exec "kubectl --context $ctx auth whoami -o json 2>&1 | jq -r '.status.userInfo | .username, (.groups[])' 2>/dev/null" | tr -d '\r') && [ -n "$info" ]; then
+    who=$(head -n1 <<<"$info" | sed 's#.*/subject/##')
     if [ -n "$user" ] && [ "$who" != "$user" ]; then
       printf "  %-10s signed in as %s, expected %s\n" "$cluster" "$who" "$user"
+      mismatch=1
     else
       printf "  %-10s ok\n" "$cluster"
     fi
-    $debug && jq . <<<"$info"
+    $debug && printf '%s\n' "$info"
     if [ -z "$user" ]; then
       user=$who
-      access=$(jq -r '.status.userInfo.groups[]' <<<"$info" | sed 's#.*/group/##; s/^sso://' | grep -v '^system:' | sed \
+      access=$(tail -n +2 <<<"$info" | sed 's#.*/group/##; s/^sso://' | grep -v '^system:' | sed \
         -e 's/^pax-admins$/everything, platform admin/' \
         -e 's/^pax-developers$/dev and stage of every site/' \
         -e 's/^xapp-\(.*\)-live$/live of \1/' \
         -e 's/^xapp-\(.*\)$/dev and stage of \1/' | paste -sd ';' - | sed 's/;/, /g')
     fi
   else
-    printf "  %-10s not reachable\n" "$cluster"
+    reason=$(ddev exec "kubectl --context $ctx auth whoami 2>&1 >/dev/null | tail -n1" | tr -d '\r')
+    printf "  %-10s not reachable: %s\n" "$cluster" "${reason:-no answer from the cluster}"
+    failed=1
   fi
 done
 echo
-echo "Signed in as ${user:-unknown}."
+if [ -z "$user" ]; then
+  echo "Signed in to Keycloak, but no cluster accepted the login, see the lines above." >&2
+  exit 1
+fi
+echo "Signed in as $user."
 echo "Access: ${access:-none granted yet, ask devops}."
+[ "$mismatch" = 0 ] || { echo "The clusters disagree about who you are, run the command again after clearing ~/.config/1x-pax/cache." >&2; exit 1; }
+[ "$failed" = 0 ] || exit 1

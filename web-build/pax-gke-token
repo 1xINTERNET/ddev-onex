@@ -28,5 +28,5 @@ token=$(jq -r '.access_token // empty' <<<"$resp")
 ttl=$(jq -r '.expires_in // 3600' <<<"$resp")
 mkdir -p "$(dirname "$cache")"
 umask 077
-jq -n --arg t "$token" --arg s "$subject" --argjson e $((now + ttl)) '{token:$t,subject:$s,expires_at:$e}' > "$cache"
+jq -n --arg t "$token" --arg s "$subject" --argjson e $((now + ttl)) '{token:$t,subject:$s,expires_at:$e}' > "$cache.$$" && mv -f "$cache.$$" "$cache"
 emit "$cache"

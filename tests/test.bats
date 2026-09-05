@@ -52,7 +52,7 @@ teardown() {
     [ "$output" = "//git.1xinternet.de/:_authToken=123" ]
  }
 
-@test "1x-pax-login" {
+@test "1x-pax-login packaging" {
   set -eu -o pipefail
   cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
   echo "# ddev get ${DIR} with project ${PROJNAME} in ${TESTDIR} ($(pwd))" >&3
@@ -69,4 +69,38 @@ teardown() {
   run ddev exec "printenv KUBECONFIG"
     [ "$status" -eq 0 ]
     [ "$output" = "/mnt/pax/kubeconfig" ]
+}
+
+pax_login_case() {
+  ddev get ${DIR} >/dev/null
+  ddev restart -y >/dev/null
+  mkdir -p ~/.config/1x-pax
+  cp "${DIR}/tests/testdata/$1" ~/.config/1x-pax/candidate.yaml
+  run env PAX_KUBECONFIG_URL="file://$HOME/.config/1x-pax/candidate.yaml" ddev 1x-pax-login
+}
+
+@test "1x-pax-login rejects a context name that escapes the credentials directory" {
+  set -eu -o pipefail
+  [ -n "${CI:-}" ] || skip "writes ~/.config/1x-pax, CI only"
+  cd ${TESTDIR}
+  pax_login_case kubeconfig-traversal.yaml
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"No acceptable cluster list"* ]]
+}
+
+@test "1x-pax-login rejects a list without contexts" {
+  set -eu -o pipefail
+  [ -n "${CI:-}" ] || skip "writes ~/.config/1x-pax, CI only"
+  cd ${TESTDIR}
+  pax_login_case kubeconfig-no-contexts.yaml
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"No acceptable cluster list"* ]]
+}
+
+@test "1x-pax-login accepts the shipped list and starts the sign-in" {
+  set -eu -o pipefail
+  [ -n "${CI:-}" ] || skip "writes ~/.config/1x-pax, CI only"
+  cd ${TESTDIR}
+  pax_login_case ../../pax/kubeconfig.yaml
+  [[ "$output" == *"Signing in to the 1pax platform"* ]]
 }
