@@ -59,6 +59,8 @@ if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
     exit 1
 fi
 
+check_registry_auth
+
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
 
 if [ ! -f "${DDEV_APPROOT}/.ddev/web-build/disabled.Dockerfile.playwright" ]; then
