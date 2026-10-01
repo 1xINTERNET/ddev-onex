@@ -7,6 +7,17 @@ name: ddev-onex
 # or doing a sanity check for requirements.
 # DDEV environment variables can be interpolated into these actions
 pre_install_actions:
+  # Releases up to 0.1.9 shipped commands/host/1x-lib.sh without the
+  # #ddev-generated signature, so ddev refuses to overwrite it on upgrade and the
+  # newer commands fail with "jq_compat: command not found". Remove that old copy
+  # (recognised by its header) so the current one is installed in its place.
+  - |
+    #ddev-description:Replace 1x-lib.sh left by ddev-onex 0.1.9 or older
+    lib="${DDEV_APPROOT}/.ddev/commands/host/1x-lib.sh"
+    if [ -f "$lib" ] && ! grep -q '#ddev-generated' "$lib" && grep -q '^# Shared helper library for 1x DDEV host commands' "$lib"; then
+      rm -f "$lib"
+      echo "Removed .ddev/commands/host/1x-lib.sh from an older ddev-onex release, it is replaced by the current version."
+    fi
   # Actions with #ddev-nodisplay will not show the execution of the action, but may show their output
 # - |
   # #ddev-nodisplay

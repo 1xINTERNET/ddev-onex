@@ -70,3 +70,25 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "/mnt/pax/kubeconfig" ]
 }
+
+@test "upgrade replaces 1x-lib.sh from 0.1.9 or older" {
+  set -eu -o pipefail
+  cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
+  # Releases up to 0.1.9 shipped 1x-lib.sh without the #ddev-generated
+  # signature, so ddev never overwrites it and newer commands that call
+  # jq_compat fail with "command not found".
+  mkdir -p .ddev/commands/host
+  printf '%s\n' '#!/usr/bin/env bash' '#' '# Shared helper library for 1x DDEV host commands.' > .ddev/commands/host/1x-lib.sh
+  ddev get ${DIR}
+  grep -q '#ddev-generated' .ddev/commands/host/1x-lib.sh
+  grep -q '^jq_compat()' .ddev/commands/host/1x-lib.sh
+}
+
+@test "upgrade keeps a 1x-lib.sh that is not from this add-on" {
+  set -eu -o pipefail
+  cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
+  mkdir -p .ddev/commands/host
+  printf '%s\n' '#!/usr/bin/env bash' '# my own helpers' > .ddev/commands/host/1x-lib.sh
+  ddev get ${DIR}
+  grep -q '# my own helpers' .ddev/commands/host/1x-lib.sh
+}
