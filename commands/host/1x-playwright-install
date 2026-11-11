@@ -38,8 +38,6 @@ if [ -f "$PACKAGE_FILE" ]; then
         rm -f "$PACKAGE_FILE.tmp"
         exit 1
     }
-else
-    echo '{}' > "$PACKAGE_FILE"
 fi
 
 # v0.5.8 is the newest ddev-playwright that builds with Playwright 1.58, the
@@ -70,6 +68,12 @@ if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
     exit 1
 fi
 
+# Scaffold fresh projects first, ddev-playwright needs a package.json with
+# Playwright in it. Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright.
+if [ "$HAS_EXISTING_PKG" = false ]; then
+    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet" || exit 1
+fi
+
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
@@ -78,10 +82,6 @@ ddev install-playwright
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 
-# Restore original package files, or scaffold for fresh projects.
 if [ "$HAS_EXISTING_PKG" = true ]; then
     echo "Restored original test/playwright/package.json."
-else
-    # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet"
 fi
