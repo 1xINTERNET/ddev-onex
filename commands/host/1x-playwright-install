@@ -65,10 +65,18 @@ fi
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
 
-# v0.5.11 is the last release that supports Playwright ~1.58. It includes the
-# fix for restarts failing on macOS once test/playwright/node_modules exists,
-# so older installs are upgraded; newer ones are left alone (#65).
-PLAYWRIGHT_ADDON_VERSION=0.5.11
+# Older ddev-playwright releases no longer build (Debian removed the libsoup
+# package they download) or break restarts on macOS once node_modules exists.
+# v0.6 fixes both but requires Playwright 1.64, so older installs are upgraded
+# and newer ones are left alone (#65).
+PLAYWRIGHT_ADDON_VERSION=0.6.1
+PLAYWRIGHT_MIN_VERSION=1.64
+PLAYWRIGHT_REQUIRED=$(jq_compat -r '.devDependencies["@playwright/test"] // .dependencies["@playwright/test"] // empty' < "$PACKAGE_FILE" | tr -d '~^>=< ')
+if [ -n "$PLAYWRIGHT_REQUIRED" ] && [ "$(printf '%s\n' "$PLAYWRIGHT_REQUIRED" "$PLAYWRIGHT_MIN_VERSION" | sort -V | head -n 1)" != "$PLAYWRIGHT_MIN_VERSION" ]; then
+    echo "Error: test/playwright/package.json requires @playwright/test ${PLAYWRIGHT_REQUIRED}, but ${PLAYWRIGHT_MIN_VERSION} or newer is needed." >&2
+    echo "Run: ddev exec -d /var/www/html/test/playwright npm install --save-dev @playwright/test@~${PLAYWRIGHT_MIN_VERSION}" >&2
+    exit 1
+fi
 PLAYWRIGHT_MANIFEST="${DDEV_APPROOT}/.ddev/addon-metadata/ddev-playwright/manifest.yaml"
 INSTALLED_VERSION=$(sed -n 's/^version: *v*//p' "$PLAYWRIGHT_MANIFEST" 2>/dev/null)
 OLDEST_VERSION=$(printf '%s\n' "$INSTALLED_VERSION" "$PLAYWRIGHT_ADDON_VERSION" | sort -V | head -n 1)
@@ -90,5 +98,5 @@ if [ "$HAS_EXISTING_PKG" = true ]; then
     echo "Restored original test/playwright/package.json."
 else
     # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet"
+    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~${PLAYWRIGHT_MIN_VERSION}' --quiet"
 fi
