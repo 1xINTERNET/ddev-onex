@@ -42,7 +42,11 @@ if [ -f "$PACKAGE_FILE" ]; then
         'def strip: with_entries(select(.key | test("^@(dxp|1xinternet)/") | not));
          if .devDependencies then .devDependencies |= strip else . end |
          if .dependencies then .dependencies |= strip else . end' \
-        < "$PACKAGE_FILE" > "$PACKAGE_FILE.tmp" && mv "$PACKAGE_FILE.tmp" "$PACKAGE_FILE"
+        < "$PACKAGE_FILE" > "$PACKAGE_FILE.tmp" && mv "$PACKAGE_FILE.tmp" "$PACKAGE_FILE" || {
+        echo "Error: could not strip private packages from test/playwright/package.json, aborting." >&2
+        rm -f "$PACKAGE_FILE.tmp"
+        exit 1
+    }
 else
     echo '{}' > "$PACKAGE_FILE"
 fi
@@ -61,11 +65,18 @@ fi
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
 
-if [ ! -f "${DDEV_APPROOT}/.ddev/web-build/disabled.Dockerfile.playwright" ]; then
-    ddev add-on get lullabot/ddev-playwright --version 0.5.0
+# v0.5.11 is the last release that supports Playwright ~1.58. It includes the
+# fix for restarts failing on macOS once test/playwright/node_modules exists,
+# so older installs are upgraded; newer ones are left alone (#65).
+PLAYWRIGHT_ADDON_VERSION=0.5.11
+PLAYWRIGHT_MANIFEST="${DDEV_APPROOT}/.ddev/addon-metadata/ddev-playwright/manifest.yaml"
+INSTALLED_VERSION=$(sed -n 's/^version: *v*//p' "$PLAYWRIGHT_MANIFEST" 2>/dev/null)
+OLDEST_VERSION=$(printf '%s\n' "$INSTALLED_VERSION" "$PLAYWRIGHT_ADDON_VERSION" | sort -V | head -n 1)
+if [ -z "$INSTALLED_VERSION" ] || [ "$OLDEST_VERSION" != "$PLAYWRIGHT_ADDON_VERSION" ]; then
+    ddev add-on get lullabot/ddev-playwright --version "v${PLAYWRIGHT_ADDON_VERSION}"
     ddev restart
 else
-    echo "lullabot/ddev-playwright already installed, skipping."
+    echo "lullabot/ddev-playwright ${INSTALLED_VERSION} already installed, skipping."
 fi
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
