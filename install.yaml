@@ -7,6 +7,12 @@ name: ddev-onex
 # or doing a sanity check for requirements.
 # DDEV environment variables can be interpolated into these actions
 pre_install_actions:
+  - |
+    #ddev-description:Remove a 1x-lib.sh from before 0.1.10 so the current one is installed (#65)
+    lib="${DDEV_APPROOT}/.ddev/commands/host/1x-lib.sh"
+    if [ -f "$lib" ] && ! grep -q '#ddev-generated' "$lib"; then
+      rm "$lib"
+    fi
   # Actions with #ddev-nodisplay will not show the execution of the action, but may show their output
 # - |
   # #ddev-nodisplay
@@ -63,6 +69,7 @@ project_files:
   - commands/host/1x-lib.sh
   - commands/host/1x-playwright
   - commands/host/1x-playwright-install
+  - config.playwright_onex.yaml
   - commands/host/1x-start
   - commands/host/1x-token-setup
   - commands/web/1x-phpcs
