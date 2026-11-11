@@ -8,30 +8,21 @@ source "${BASH_SOURCE%/*}/1x-lib.sh"
 
 start=`date_compat +%s`
 
-# Temporarily replace package.json/package-lock.json with empty {} before any
-# Docker build. The lullabot Dockerfile bind-mounts test/playwright/ and runs
-# npm install, which fails on private @dxp/* deps (no auth tokens in build context).
-# Must happen on the host before ddev start, since pre-start hooks copy
-# test/playwright/ into the build context.
+# Temporarily strip the private @dxp/* and @1xinternet/* packages from
+# package.json before any Docker build. The lullabot Dockerfile runs npm install
+# without auth tokens, which fails on them. config.playwright_onex.yaml does the
+# same for the staged lock file and for every later restart (#65).
 restore_package_files() {
     if [ -f "${DDEV_APPROOT}/test/playwright/package.json.onex-backup" ]; then
         mv "${DDEV_APPROOT}/test/playwright/package.json.onex-backup" "${DDEV_APPROOT}/test/playwright/package.json"
-    fi
-    if [ -f "${DDEV_APPROOT}/test/playwright/package-lock.json.onex-backup" ]; then
-        mv "${DDEV_APPROOT}/test/playwright/package-lock.json.onex-backup" "${DDEV_APPROOT}/test/playwright/package-lock.json"
     fi
 }
 trap restore_package_files EXIT
 
 HAS_EXISTING_PKG=false
-HAS_EXISTING_LOCK=false
 if [ -f "${DDEV_APPROOT}/test/playwright/package.json" ]; then
     HAS_EXISTING_PKG=true
     cp "${DDEV_APPROOT}/test/playwright/package.json" "${DDEV_APPROOT}/test/playwright/package.json.onex-backup"
-fi
-if [ -f "${DDEV_APPROOT}/test/playwright/package-lock.json" ]; then
-    HAS_EXISTING_LOCK=true
-    cp "${DDEV_APPROOT}/test/playwright/package-lock.json" "${DDEV_APPROOT}/test/playwright/package-lock.json.onex-backup"
 fi
 
 mkdir -p "${DDEV_APPROOT}/test/playwright"
@@ -50,10 +41,26 @@ if [ -f "$PACKAGE_FILE" ]; then
 else
     echo '{}' > "$PACKAGE_FILE"
 fi
-rm -f "${DDEV_APPROOT}/test/playwright/package-lock.json"
+
+# v0.5.8 is the newest ddev-playwright that builds with Playwright 1.58, the
+# version the Qaack tester supports. Before it, restarts break on macOS once
+# test/playwright/node_modules exists; v0.5.9-v0.5.11 download a libsoup package
+# Debian has removed. v0.6+ needs Playwright 1.64 and is left alone (#65).
+# Upgrade before starting DDEV, an older version can fail to start.
+PLAYWRIGHT_ADDON_VERSION=0.5.8
+PLAYWRIGHT_MANIFEST="${DDEV_APPROOT}/.ddev/addon-metadata/ddev-playwright/manifest.yaml"
+INSTALLED_VERSION=$(sed -n 's/^version: *v*//p' "$PLAYWRIGHT_MANIFEST" 2>/dev/null)
+case "$INSTALLED_VERSION" in
+    "$PLAYWRIGHT_ADDON_VERSION"|0.6.*|0.[7-9]*|[1-9]*)
+        echo "lullabot/ddev-playwright ${INSTALLED_VERSION} already installed, skipping."
+        ;;
+    *)
+        ddev add-on get lullabot/ddev-playwright --version "v${PLAYWRIGHT_ADDON_VERSION}" || exit 1
+        ;;
+esac
 
 # Make sure the container is alive.
-ddev start
+ddev start || exit 1
 
 # Let's make sure @dxp-scoped package registry is defined as it required in the starterkit below.
 DXP_REGISTRY=$(ddev exec "npm config get @dxp:registry")
@@ -64,28 +71,6 @@ if [ -z "$DXP_REGISTRY" ] || [ "$DXP_REGISTRY" = "undefined" ]; then
 fi
 
 echo -e "${GREEN}Installing playwright (within DDEV):${NC}"
-
-# Older ddev-playwright releases no longer build (Debian removed the libsoup
-# package they download) or break restarts on macOS once node_modules exists.
-# v0.6 fixes both but requires Playwright 1.64, so older installs are upgraded
-# and newer ones are left alone (#65).
-PLAYWRIGHT_ADDON_VERSION=0.6.1
-PLAYWRIGHT_MIN_VERSION=1.64
-PLAYWRIGHT_REQUIRED=$(jq_compat -r '.devDependencies["@playwright/test"] // .dependencies["@playwright/test"] // empty' < "$PACKAGE_FILE" | tr -d '~^>=< ')
-if [ -n "$PLAYWRIGHT_REQUIRED" ] && [ "$(printf '%s\n' "$PLAYWRIGHT_REQUIRED" "$PLAYWRIGHT_MIN_VERSION" | sort -V | head -n 1)" != "$PLAYWRIGHT_MIN_VERSION" ]; then
-    echo "Error: test/playwright/package.json requires @playwright/test ${PLAYWRIGHT_REQUIRED}, but ${PLAYWRIGHT_MIN_VERSION} or newer is needed." >&2
-    echo "Run: ddev exec -d /var/www/html/test/playwright npm install --save-dev @playwright/test@~${PLAYWRIGHT_MIN_VERSION}" >&2
-    exit 1
-fi
-PLAYWRIGHT_MANIFEST="${DDEV_APPROOT}/.ddev/addon-metadata/ddev-playwright/manifest.yaml"
-INSTALLED_VERSION=$(sed -n 's/^version: *v*//p' "$PLAYWRIGHT_MANIFEST" 2>/dev/null)
-OLDEST_VERSION=$(printf '%s\n' "$INSTALLED_VERSION" "$PLAYWRIGHT_ADDON_VERSION" | sort -V | head -n 1)
-if [ -z "$INSTALLED_VERSION" ] || [ "$OLDEST_VERSION" != "$PLAYWRIGHT_ADDON_VERSION" ]; then
-    ddev add-on get lullabot/ddev-playwright --version "v${PLAYWRIGHT_ADDON_VERSION}"
-    ddev restart
-else
-    echo "lullabot/ddev-playwright ${INSTALLED_VERSION} already installed, skipping."
-fi
 
 [ "${DDEV_MUTAGEN_ENABLED:-}" = "true" ] && ddev mutagen sync
 # Install playwright *inside* the ddev container (see lullabot/ddev-playwright).
@@ -98,5 +83,5 @@ if [ "$HAS_EXISTING_PKG" = true ]; then
     echo "Restored original test/playwright/package.json."
 else
     # Use our forked starterkit https://github.com/1xINTERNET/create-dxp-playwright to scaffold.
-    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~${PLAYWRIGHT_MIN_VERSION}' --quiet"
+    ddev exec -d /var/www/html/test/playwright "npx --yes 1xINTERNET/create-dxp-playwright --version='~1.58' --quiet"
 fi

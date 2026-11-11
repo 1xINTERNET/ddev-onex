@@ -69,6 +69,7 @@ project_files:
   - commands/host/1x-lib.sh
   - commands/host/1x-playwright
   - commands/host/1x-playwright-install
+  - config.playwright_onex.yaml
   - commands/host/1x-start
   - commands/host/1x-token-setup
   - commands/web/1x-phpcs
