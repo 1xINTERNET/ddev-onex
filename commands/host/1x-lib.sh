@@ -89,3 +89,17 @@ jq_compat() {
     return 1
   fi
 }
+
+# Cross-platform "yq" (mikefarah/yq v4). Uses the host binary when it is mikefarah's, otherwise docker.
+# Files are resolved relative to the current directory, which is mounted as /workdir; stdin works too.
+YQ_IMAGE="${YQ_IMAGE:-mikefarah/yq:4.54.3}"
+yq_compat() {
+  if command -v yq >/dev/null 2>&1 && yq --version 2>&1 | grep -q mikefarah; then
+    yq "$@"
+  elif command -v docker >/dev/null 2>&1; then
+    docker run --rm -i --user "$(id -u):$(id -g)" -v "${PWD}:/workdir" -w /workdir "${YQ_IMAGE}" "$@"
+  else
+    echo "Error: yq (mikefarah) not found and docker is not available. Please install yq or docker." >&2
+    return 1
+  fi
+}
