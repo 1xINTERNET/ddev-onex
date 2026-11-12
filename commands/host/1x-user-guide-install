@@ -235,7 +235,7 @@ Find facts yourself (repo, .ddev/config.yaml, .gitlab-ci.yml, docs/STANDARDS.md,
 
 Store the facts by piping JSON to: ddev 1x-user-guide-install store
 Schema (version 1): {\"version\":1,\"publish\":\"tags|branch:<name>\",\"pages\":\"own|existing\",\"sites\":[{\"name\":\"Stage\",\"url\":\"https://...\"}],\"branding\":{\"title\":\"...\",\"logo\":\"path\",\"favicon\":\"path\",\"accent\":\"#rrggbb\"}}
-It validates and prints errors; fix and store again. Then run: ddev 1x-user-guide-install apply --dry-run, show me the output and stop. Do not run apply without --dry-run, do not edit .gitlab-ci.yml or ${SITE} by hand, and do not change anything on GitLab; applying is my decision.
+It validates and prints errors; fix and store again. Then run: ddev 1x-user-guide-install apply --dry-run, show me the output and stop. Tell me to run 'ddev 1x-user-guide-install apply' myself in a separate terminal, not with ! in this session: it asks before writing and needs a real terminal for that. Then I tell you when it is done. Do not run apply without --dry-run, do not edit .gitlab-ci.yml or ${SITE} by hand, and do not change anything on GitLab; applying is my decision.
 
 When I tell you that apply is done, continue with the local content, state what you change before each step:
 - STANDARDS: add the section 'End-user documentation' to docs/STANDARDS.md with the template in .agent/skills/user-guide/assets/standards-section.md. Ask me for readers, their roles and the language.
@@ -264,7 +264,7 @@ if [ "${SUB}" = "store" ]; then
   if [ "${DRY}" = 1 ]; then ok "Valid (dry run, not stored)"; exit 0; fi
   cp "${TMP}" "${FACTS}"
   ok "Stored in ${FACTS}"
-  echo "Next: ddev 1x-user-guide-install apply   (shows every change first)"
+  echo "Next, in a terminal (it asks before writing): ddev 1x-user-guide-install apply"
   exit 0
 fi
 
@@ -313,10 +313,11 @@ else
   yq_compat ".include = ([.include] | flatten | map(select(. != null))) + [{\"project\": \"${INCLUDE_PROJECT}\", \"file\": \"${INCLUDE_FILE}\"}]" < "${NEW_CI}" > "${NEW_CI}.out"
   mv "${NEW_CI}.out" "${NEW_CI}"
 fi
-if [ -n "${BRANCH}" ]; then
+# yq rewrites the whole file (it drops blank lines between blocks), so it only runs when a value really changes.
+if [ -n "${BRANCH}" ] && [ "$(yq_compat '.variables.GITLAB_PAGES_BRANCH // ""' < "${NEW_CI}")" != "${BRANCH}" ]; then
   yq_compat ".variables.GITLAB_PAGES_BRANCH = \"${BRANCH}\"" < "${NEW_CI}" > "${NEW_CI}.out"; mv "${NEW_CI}.out" "${NEW_CI}"
 fi
-if [ "${PAGES}" = "existing" ]; then
+if [ "${PAGES}" = "existing" ] && [ "$(yq_compat '.variables.GITLAB_PAGES_ENABLED // ""' < "${NEW_CI}")" != "false" ]; then
   yq_compat '.variables.GITLAB_PAGES_ENABLED = "false"' < "${NEW_CI}" > "${NEW_CI}.out"; mv "${NEW_CI}.out" "${NEW_CI}"
 fi
 
@@ -364,7 +365,7 @@ step "2/3 ${SITE}"
 # Local stays first; Stage, Prod and the like come from the facts. Branding keys are only set when given.
 jq_compat --slurpfile f "${FACTS}" '
   ($f[0]) as $facts
-  | .sites = ((.sites // [] | map(select(.name == "Local"))) + ($facts.sites // []))
+  | (if $facts.sites then .sites = ((.sites // [] | map(select(.name == "Local"))) + $facts.sites) else . end)
   | (if $facts.branding.title then .title = $facts.branding.title else . end)
   | (if $facts.branding.logo then .logo = "assets/" + ($facts.branding.logo | split("/") | last) else . end)
   | (if $facts.branding.favicon then .favicon = "assets/" + ($facts.branding.favicon | split("/") | last) else . end)
@@ -378,6 +379,9 @@ for pair in "${CI_FILE}:${NEW_CI}" "${SITE}:${NEW_SITE}"; do
   SOMETHING=1
   echo "Changes to ${cur}:"
   if [ -f "${cur}" ]; then diff -u --label "${cur}" --label "${cur} (new)" "${cur}" "${new}" || true; else cat "${new}"; fi
+  if [ "${cur}" = "${CI_FILE}" ] && [ -f "${cur}" ]; then
+    note "yq drops blank lines between blocks in ${CI_FILE}; that part of the diff is formatting only."
+  fi
 done
 for a in ${ASSETS_TO_COPY}; do
   [ -f "${GUIDE}/assets/$(basename "${a}")" ] && cmp -s "${a}" "${GUIDE}/assets/$(basename "${a}")" || { SOMETHING=1; echo "Copy ${a} -> ${GUIDE}/assets/$(basename "${a}")"; }
@@ -387,10 +391,17 @@ if [ "${SOMETHING}" = 1 ]; then
   elif [ "${YES}" = 1 ] || confirm "Write these files?"; then
     cp "${NEW_CI}" "${CI_FILE}"; cp "${NEW_SITE}" "${SITE}"
     for a in ${ASSETS_TO_COPY}; do mkdir -p "${GUIDE}/assets"; cp "${a}" "${GUIDE}/assets/"; done
+    SOMETHING=0
     ok "Written (review with git diff)"
+  elif [ "${INTERACTIVE}" = 0 ]; then
+    note "Not an interactive terminal (e.g. run with ! inside Claude Code), so nothing written. Run it in a separate terminal: ddev 1x-user-guide-install apply"
   else
     note "Nothing written."
   fi
+fi
+# Once site.config.json matches the facts, it is the only source of sites and branding; the facts keep the CI decisions.
+if [ "${SOMETHING}" = 0 ] && [ "${DRY}" = 0 ] && [ "${FACTS}" = "${GUIDE}/setup.json" ]; then
+  jq_compat 'del(.sites, .branding)' < "${FACTS}" > "${FACTS}.tmp" && mv "${FACTS}.tmp" "${FACTS}"
 fi
 
 step "3/3 GitLab Pages settings"
@@ -406,6 +417,8 @@ else
     elif confirm "Set pages_access_level=private on GitLab project ${GITLAB_PATH}?"; then
       glab api -X PUT "projects/${PROJECT_ID}" -f pages_access_level=private > /dev/null
       ok "pages_access_level set to private"
+    elif [ "${INTERACTIVE}" = 0 ]; then
+      note "Not an interactive terminal, so not changed. Run apply in a separate terminal, or set it in GitLab under Settings > General > Visibility > Pages."
     else
       note "Not changed. Set it in GitLab under Settings > General > Visibility > Pages."
     fi

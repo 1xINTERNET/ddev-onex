@@ -23,7 +23,7 @@ Commands running on the host:
   - **prepare** (local): checks the prerequisites (VPN/GitLab, a running local site, Playwright), adds the `user-guide` agents package to `.1xai-manifest.json` and installs it, creates `docs/user-guide/`, adds the screenshot runner and builds the guide once.
   - **establish**: after a `[y/N]`, Claude Code finds the facts and asks the decisions (publish on tags or from a branch, existing Pages job, Stage/Prod URLs, branding).
   - **store**: the facts are piped to `store`, which validates them and writes `docs/user-guide/setup.json`.
-  - **apply** (deterministic): adds the `gitlab-pages.yml` include and `GITLAB_PAGES_BRANCH` to `.gitlab-ci.yml` with `yq`, gives the jobs a stage when GitLab's CI lint dry run says the pipeline would be empty, updates `site.config.json` and copies the logo/favicon, shows every diff and asks before writing, and sets `pages_access_level=private` only after an interactive yes. `--dry-run` changes nothing (and skips prepare).
+  - **apply** (deterministic): adds the `gitlab-pages.yml` include and `GITLAB_PAGES_BRANCH` to `.gitlab-ci.yml` with `yq`, gives the jobs a stage when GitLab's CI lint dry run says the pipeline would be empty, updates `site.config.json` and copies the logo/favicon, shows every diff and asks before writing, and sets `pages_access_level=private` only after an interactive yes. `--dry-run` changes nothing (and skips prepare). Run it in a terminal, not with `!` inside Claude Code: without a real terminal it cannot ask and writes nothing. `.gitlab-ci.yml` is only rewritten when a value changes; `yq` then drops the blank lines between blocks (formatting only).
   - Without arguments it runs prepare, then `apply` when facts exist, otherwise `establish`. Re-run a single phase with its name, e.g. `ddev 1x-user-guide-install apply`.
   - Without Claude Code (or when you do not want it): `ddev 1x-user-guide-install --manifest facts.json` validates, stores and applies the same JSON. The format is described below.
   - After applying, Claude Code continues with the STANDARDS section and the first page. Needs `glab` for the GitLab part; `yq` runs through docker when it is not installed.
@@ -36,7 +36,7 @@ Commands running on the host:
   ddev 1x-user-guide check      # before committing
   ```
 
-  The setup manifest (`docs/user-guide/setup.json`, version 1) that `store` and `--manifest` accept; only `version` and `publish` are required:
+  The setup manifest (`docs/user-guide/setup.json`, version 1) that `store` and `--manifest` accept; only `version` and `publish` are required. Once `apply` has written the files, `setup.json` keeps only `publish` and `pages`: sites and branding then live in `site.config.json` alone, so a later `apply` does not overwrite changes made there.
 
   ```json
   {
