@@ -51,7 +51,7 @@ case "${1:-serve}" in
       echo "${HOST} does not resolve, adding it to the hosts file (may ask for your password)."
       ddev hostname "${HOST}" 127.0.0.1
     fi
-    # The site lives under the path of its Pages URL, e.g. /see-dxp/.
+    # The site lives under the path of its Pages URL, e.g. /<project>/.
     BASE_PATH="$(jq_compat -r '.url // ""' < "${CONFIG}" | sed -E 's#^https?://[^/]+##')"
     PORT=""
     [ "${DDEV_ROUTER_HTTPS_PORT:-443}" != "443" ] && PORT=":${DDEV_ROUTER_HTTPS_PORT}"
