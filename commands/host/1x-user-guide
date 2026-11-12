@@ -2,8 +2,8 @@
 
 ## #ddev-generated
 ## Description: Preview, check or build the user guide (docs/user-guide/) with the 1x gitlab-pages image
-## Usage: 1x-user-guide [serve|check|build] [port]
-## Example: "ddev 1x-user-guide" (preview, Ctrl+C stops it), "ddev 1x-user-guide check" (full build with link check, before committing), "ddev 1x-user-guide build" (static site in public/)
+## Usage: 1x-user-guide [serve|stop|check|build]
+## Example: "ddev 1x-user-guide" (preview, run again after adding, moving or reordering pages), "ddev 1x-user-guide stop" (end the preview), "ddev 1x-user-guide check" (full build with link check, before committing), "ddev 1x-user-guide build" (static site in public/)
 
 # Runs the same image as the CI jobs of gitlab-pages.yml in 1xinternet/gitlab-ci-common,
 # so the preview and the check match the pipeline.
@@ -29,15 +29,39 @@ run() {
   docker run --rm --platform "${PLATFORM}" -v "${DDEV_APPROOT}:/project" "$@"
 }
 
+CONTAINER="ddev-${DDEV_SITENAME}-user-guide"
+
 case "${1:-serve}" in
   serve)
-    PORT="${2:-${USER_GUIDE_PORT:-8000}}"
+    # Served by the user-guide service of docker-compose.user-guide.yaml through the ddev router.
+    if [ -n "$(docker ps -q --filter "name=^${CONTAINER}$")" ]; then
+      docker restart "${CONTAINER}" > /dev/null
+    else
+      ddev start --profiles=user-guide
+    fi
+    if [ -z "$(docker ps -q --filter "name=^${CONTAINER}$")" ]; then
+      echo -e "${RED}The user-guide service did not start. After installing or updating ddev-onex run: ddev restart${NC}"
+      exit 1
+    fi
+    HOST="${DDEV_SITENAME}.pages.${DDEV_TLD}"
+    # ddev only adds hosts entries for its own hostnames, not for this service; same fallback as ddev.
+    # curl reports a lookup time of 0 when the name did not resolve (also on a timeout, e.g. a dead resolver in /etc/resolver/).
+    LOOKUP="$(curl -s -o /dev/null --max-time 8 -w '%{time_namelookup}' "http://${HOST}/" || true)"
+    if [ -z "${LOOKUP}" ] || [ "${LOOKUP}" = "0.000000" ]; then
+      echo "${HOST} does not resolve, adding it to the hosts file (may ask for your password)."
+      ddev hostname "${HOST}" 127.0.0.1
+    fi
     # The site lives under the path of its Pages URL, e.g. /see-dxp/.
     BASE_PATH="$(jq_compat -r '.url // ""' < "${CONFIG}" | sed -E 's#^https?://[^/]+##')"
-    echo -e "${GREEN}User guide: http://localhost:${PORT}${BASE_PATH:-/}${NC} (Ctrl+C stops it; restart after adding, moving or reordering pages)"
-    TTY=""
-    [ -t 1 ] && TTY="-it"
-    run ${TTY} -p "${PORT}:4321" "${IMAGE}" gitlab-pages serve /project
+    PORT=""
+    [ "${DDEV_ROUTER_HTTPS_PORT:-443}" != "443" ] && PORT=":${DDEV_ROUTER_HTTPS_PORT}"
+    echo -e "${GREEN}User guide: https://${HOST}${PORT}${BASE_PATH:-/}${NC}"
+    echo "Ready a few seconds after start. Run again after adding, moving or reordering pages; end it with: ddev 1x-user-guide stop"
+    ;;
+  stop)
+    # Remove, not stop: ddev start waits for a stopped profile container and fails.
+    docker rm -f "${CONTAINER}" > /dev/null 2>&1 || true
+    echo "User guide preview stopped."
     ;;
   check)
     run "${IMAGE}" gitlab-pages check /project

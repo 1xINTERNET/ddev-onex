@@ -77,6 +77,9 @@ teardown() {
   ddev get ${DIR}
   [ -x .ddev/commands/host/1x-user-guide ]
   [ -x .ddev/commands/host/1x-user-guide-install ]
+  # The preview service ships with the add-on and stays off unless its profile is started.
+  grep -q 'VIRTUAL_HOST: ${DDEV_SITENAME}.pages' .ddev/docker-compose.user-guide.yaml
+  grep -A1 'profiles:' .ddev/docker-compose.user-guide.yaml | grep -q user-guide
   # Without a guide the preview command says how to set it up.
   run ddev 1x-user-guide check
     [ "$status" -ne 0 ]
