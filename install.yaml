@@ -65,6 +65,9 @@ project_files:
   - commands/host/1x-playwright-install
   - commands/host/1x-start
   - commands/host/1x-token-setup
+  - commands/host/1x-user-guide
+  - commands/host/1x-user-guide-install
+  - docker-compose.user-guide.yaml
   - commands/web/1x-phpcs
   - commands/host/1x-pax-login
   - web-build/Dockerfile.pax
