@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+## #ddev-generated
+## Description: Prepare this project for the end-user guide (docs/user-guide/ on GitLab Pages): checks, agents package, content folder, screenshot runner. Claude Code does the rest.
+## Usage: 1x-user-guide-install
+## Example: "ddev 1x-user-guide-install"
+
+# Idempotent: every step skips what is already in place, so it can run again after fixing a failed check.
+set -euo pipefail
+
+source "${BASH_SOURCE%/*}/1x-lib.sh"
+
+cd "${DDEV_APPROOT}"
+
+fail() { echo -e "${RED}✗ $*${NC}" >&2; exit 1; }
+ok() { echo -e "${GREEN}✓${NC} $*"; }
+note() { echo -e "${YELLOW}!${NC} $*"; }
+step() { echo -e "\n${CYAN}$*${NC}"; }
+
+PROMOTED_PACKAGE="git@git.1xinternet.de:1x-agents/packages/user-guide.git"
+CUSTOM_PACKAGE="git@git.1xinternet.de:1x-agents/packages/custom/user-guide.git"
+SKILL=".agent/skills/user-guide"
+GUIDE="docs/user-guide"
+
+step "1/5 Checks"
+git rev-parse --git-dir > /dev/null 2>&1 || fail "Not a git repository."
+REMOTE="$(git remote get-url origin 2>/dev/null)" || fail "No git remote 'origin'."
+case "${REMOTE}" in
+  *git.1xinternet.de*) ;;
+  *) fail "origin is not on git.1xinternet.de (${REMOTE}); GitLab Pages needs the project there." ;;
+esac
+git ls-remote origin HEAD > /dev/null 2>&1 \
+  || fail "GitLab is not reachable over SSH. Connect the VPN and check: ssh -T git@git.1xinternet.de"
+ok "GitLab reachable"
+[ -f .1xai-manifest.json ] || fail "No .1xai-manifest.json: install 1x-ai in this project first (npx @1xINTERNET/1x-ai@latest)."
+command -v npx > /dev/null 2>&1 || fail "npx not found on the host: install Node.js."
+ddev drush php:eval "echo 1;" > /dev/null 2>&1 \
+  || fail "The local site doesn't run (drush fails). Usually the database belongs to another branch: import a fresh one or run 'ddev drush deploy', then run this again."
+ok "Local site runs"
+if ! ddev 1x-playwright --version > /dev/null 2>&1 || [ ! -f test/playwright/playwright.config.ts ]; then
+  fail "Playwright is not set up: run 'ddev 1x-token-setup' and 'ddev 1x-playwright-install', then run this again."
+fi
+ok "Playwright set up"
+
+step "2/5 Agents package"
+# Prefer the promoted package once it exists; replace a line for the other repo or for a branch.
+if git ls-remote "${PROMOTED_PACKAGE}" HEAD > /dev/null 2>&1; then
+  PACKAGE="${PROMOTED_PACKAGE}"
+else
+  PACKAGE="${CUSTOM_PACKAGE}"
+fi
+CURRENT="$(jq_compat -r --arg p "${PACKAGE}" '.packages[$p] // ""' < .1xai-manifest.json)"
+if [ "${CURRENT}" != "HEAD" ]; then
+  jq_compat --arg a "${PROMOTED_PACKAGE}" --arg b "${CUSTOM_PACKAGE}" --arg p "${PACKAGE}" \
+    '.packages |= (del(.[$a], .[$b]) + {($p): "HEAD"})' < .1xai-manifest.json > .1xai-manifest.json.tmp
+  mv .1xai-manifest.json.tmp .1xai-manifest.json
+  ok "Added ${PACKAGE} to .1xai-manifest.json"
+else
+  ok "Package already in .1xai-manifest.json"
+fi
+npx --yes @1xINTERNET/1x-ai@latest . update > /dev/null
+[ -f "${SKILL}/SKILL.md" ] || fail "The user-guide skill was not installed (${SKILL}). Run 'npx @1xINTERNET/1x-ai@latest . update' and check its output."
+ok "user-guide skill installed"
+
+step "3/5 Content folder"
+# Pages URL from the GitLab path: group/sub/project -> https://group.pages.1xinternet.de/sub/project/
+GITLAB_PATH="$(echo "${REMOTE}" | sed -E 's#^(ssh://)?(git@|https://)git\.1xinternet\.de[:/]##; s#\.git$##')"
+PAGES_URL="https://${GITLAB_PATH%%/*}.pages.1xinternet.de/${GITLAB_PATH#*/}/"
+mkdir -p "${GUIDE}"
+if [ ! -f "${GUIDE}/site.config.json" ]; then
+  jq_compat -n --arg title "${DDEV_PROJECT} user guide" --arg url "${PAGES_URL}" --arg local "${DDEV_PRIMARY_URL}" \
+    '{title: $title, description: "How to work with the website.", url: $url, sites: [{name: "Local", url: $local}]}' \
+    > "${GUIDE}/site.config.json"
+  ok "Created ${GUIDE}/site.config.json (${PAGES_URL})"
+else
+  ok "${GUIDE}/site.config.json exists"
+fi
+if [ ! -f "${GUIDE}/index.md" ]; then
+  cat > "${GUIDE}/index.md" <<EOF
+---
+title: ${DDEV_PROJECT} user guide
+description: How to work with the website.
+---
+
+This guide explains how to work with the website.
+EOF
+  ok "Created ${GUIDE}/index.md"
+else
+  ok "${GUIDE}/index.md exists"
+fi
+# The preview is now 'ddev 1x-user-guide'; remove the copy the user-guide skill used to manage.
+if [ -f .ddev/commands/host/user-guide ] && grep -q "MANAGED FILE" .ddev/commands/host/user-guide; then
+  rm .ddev/commands/host/user-guide
+  ok "Removed the old .ddev/commands/host/user-guide (now: ddev 1x-user-guide)"
+fi
+
+step "4/5 Screenshot runner"
+# The runner is a managed copy of the skill's asset; only an older managed version is replaced.
+version() { sed -n 's/.*Version \([0-9][0-9]*\)\..*/\1/p' "$1" | head -1; }
+ASSETS="${SKILL}/assets/playwright"
+if [ ! -f test/playwright/playwright.user-guide.config.ts ]; then
+  cp "${ASSETS}/playwright.user-guide.config.ts" test/playwright/
+  ok "Added test/playwright/playwright.user-guide.config.ts"
+fi
+SPEC="test/playwright/user-guide/screenshots.spec.ts"
+if [ ! -f "${SPEC}" ]; then
+  mkdir -p "$(dirname "${SPEC}")"
+  cp "${ASSETS}/user-guide/screenshots.spec.ts" "${SPEC}"
+  ok "Added ${SPEC}"
+elif head -1 "${SPEC}" | grep -q "MANAGED FILE"; then
+  if [ "$(version "${SPEC}")" -lt "$(version "${ASSETS}/user-guide/screenshots.spec.ts")" ]; then
+    cp "${ASSETS}/user-guide/screenshots.spec.ts" "${SPEC}"
+    ok "Updated ${SPEC}"
+  else
+    ok "${SPEC} is up to date"
+  fi
+else
+  note "${SPEC} is the project's own script; Claude Code moves its shots into screenshots.json."
+fi
+ddev 1x-playwright test -c playwright.user-guide.config.ts --pass-with-no-tests > /dev/null \
+  || fail "The screenshot runner fails: ddev 1x-playwright test -c playwright.user-guide.config.ts --pass-with-no-tests"
+ok "Screenshot runner works"
+
+step "5/5 Build"
+ddev 1x-user-guide check > /dev/null || fail "The guide doesn't build: ddev 1x-user-guide check"
+ok "Guide builds (ddev 1x-user-guide check)"
+
+echo -e "\n${GREEN}Done. Next: start Claude Code in this project and say:${NC}"
+echo -e "\n  Set up the user guide in this project.\n"
+echo "It adds the CI jobs, the GitLab Pages settings, logo and colours and the STANDARDS section, and writes the first page with you."
+echo "Preview: ddev 1x-user-guide"

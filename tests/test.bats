@@ -70,3 +70,17 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "/mnt/pax/kubeconfig" ]
 }
+
+@test "1x-user-guide" {
+  set -eu -o pipefail
+  cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
+  ddev get ${DIR}
+  [ -x .ddev/commands/host/1x-user-guide ]
+  [ -x .ddev/commands/host/1x-user-guide-install ]
+  # Without a guide the preview command says how to set it up.
+  run ddev 1x-user-guide check
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"ddev 1x-user-guide-install"* ]]
+  # Building needs the gitlab-pages image from git.1xinternet.de, which CI runners may not reach;
+  # that part is tested in a project.
+}

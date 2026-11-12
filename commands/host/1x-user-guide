@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+## #ddev-generated
+## Description: Preview, check or build the user guide (docs/user-guide/) with the 1x gitlab-pages image
+## Usage: 1x-user-guide [serve|check|build] [port]
+## Example: "ddev 1x-user-guide" (preview, Ctrl+C stops it), "ddev 1x-user-guide check" (full build with link check, before committing), "ddev 1x-user-guide build" (static site in public/)
+
+# Runs the same image as the CI jobs of gitlab-pages.yml in 1xinternet/gitlab-ci-common,
+# so the preview and the check match the pipeline.
+set -euo pipefail
+
+source "${BASH_SOURCE%/*}/1x-lib.sh"
+
+IMAGE="${GITLAB_PAGES_IMAGE:-git.1xinternet.de:4567/public_group/public_registry/gitlab-pages:latest}"
+CONFIG="${DDEV_APPROOT}/docs/user-guide/site.config.json"
+
+if [ ! -f "${CONFIG}" ]; then
+  echo -e "${RED}No user guide in this project (docs/user-guide/site.config.json). Set it up with: ddev 1x-user-guide-install${NC}"
+  exit 1
+fi
+
+docker pull --quiet "${IMAGE}" > /dev/null || echo -e "${YELLOW}Could not update ${IMAGE}, using the local copy.${NC}"
+
+run() {
+  docker run --rm -v "${DDEV_APPROOT}:/project" "$@"
+}
+
+case "${1:-serve}" in
+  serve)
+    PORT="${2:-${USER_GUIDE_PORT:-8000}}"
+    # The site lives under the path of its Pages URL, e.g. /see-dxp/.
+    BASE_PATH="$(jq_compat -r '.url // ""' < "${CONFIG}" | sed -E 's#^https?://[^/]+##')"
+    echo -e "${GREEN}User guide: http://localhost:${PORT}${BASE_PATH:-/}${NC} (Ctrl+C stops it; restart after adding, moving or reordering pages)"
+    TTY=""
+    [ -t 1 ] && TTY="-it"
+    run ${TTY} -p "${PORT}:4321" "${IMAGE}" gitlab-pages serve /project
+    ;;
+  check)
+    run "${IMAGE}" gitlab-pages check /project
+    ;;
+  build)
+    run "${IMAGE}" gitlab-pages build /project /project/public
+    ;;
+  *)
+    sed -n '4,6p' "$0"
+    exit 1
+    ;;
+esac
