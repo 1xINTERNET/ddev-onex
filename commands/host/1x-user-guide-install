@@ -125,7 +125,45 @@ step "5/5 Build"
 ddev 1x-user-guide check > /dev/null || fail "The guide doesn't build: ddev 1x-user-guide check"
 ok "Guide builds (ddev 1x-user-guide check)"
 
-echo -e "\n${GREEN}Done. Next: start Claude Code in this project and say:${NC}"
-echo -e "\n  Set up the user guide in this project.\n"
-echo "It adds the CI jobs, the GitLab Pages settings, logo and colours and the STANDARDS section, and writes the first page with you."
-echo "Preview: ddev 1x-user-guide"
+step "Open todos for Claude Code"
+# Only what is still missing goes into the prompt; everything above is done.
+TODOS=()
+if ! grep -qs "gitlab-pages.yml" .gitlab-ci.yml; then
+  TODOS+=("CI: add the gitlab-pages template to .gitlab-ci.yml (create the file if missing): include project '1xinternet/gitlab-ci-common', file 'gitlab-pages.yml'. Ask me: publish on release tags (what Prod has; only if the project has tags and a tag pipeline) or from one branch, e.g. main (what Stage has) or an MVP branch; for a branch set variables: GITLAB_PAGES_BRANCH. If another job named pages or a docs-ui include already uses the Pages site, ask whether to keep it and only check the guide (GITLAB_PAGES_ENABLED: 'false'). Remove old copied jobs (.user-guide-build, user-guide:check, pages for the guide) and tools/user-guide-site/.")
+fi
+TODOS+=("Stages: the template's jobs run in stage .post, and GitLab never creates a pipeline with only .pre/.post jobs. Run a lint dry run for the publish ref (glab api -X POST projects/<id>/ci/lint with dry_run, include_jobs, ref). If the pipeline would be empty, the project has no other merge request jobs, or this is its first CI file, override in .gitlab-ci.yml: user-guide:check and pages each get a stage the project defines in stages: (without stages: use test and deploy).")
+TODOS+=("GitLab Pages settings (remote changes: name each one and ask first): glab api projects/<id>/pages. If is_unique_domain_enabled is true, ask me to turn it off in GitLab under Deploy > Pages > Use unique domain, then check again. The site is always for project members only: if pages_access_level is not private, set it with glab api -X PUT projects/<id> -f pages_access_level=private. Never make it public, don't ask.")
+if ! jq_compat -e '.logo' < "${GUIDE}/site.config.json" > /dev/null 2>&1; then
+  TODOS+=("Branding in ${GUIDE}/site.config.json: title '<Project> user guide' with the real project name; logo, favicon and accent from the active frontend theme: an SVG logo with fixed fill colours (not currentColor), the largest PNG favicon, the logo's brand colour as accent. Copy them to ${GUIDE}/assets/ and set logo, favicon, accent. Ask only if there are several real candidates.")
+fi
+if [ "$(jq_compat '.sites | length' < "${GUIDE}/site.config.json")" -lt 3 ]; then
+  TODOS+=("Websites in ${GUIDE}/site.config.json, in this order: Local (already set), Stage (usually https://stage.<project>.de, main branch), Prod (usually https://www.<project>.de, tagged main). Confirm them from docs/STANDARDS.md or the environment urls of the deploy jobs; ask only for what no source confirms. No test environment; Qaack is not a preset.")
+fi
+if ! grep -qs "End-user documentation" docs/STANDARDS.md; then
+  TODOS+=("STANDARDS: add the section 'End-user documentation' to docs/STANDARDS.md with the template in .agent/skills/user-guide/assets/standards-section.md. Ask me for readers, their roles and the language. Pages URL: ${PAGES_URL}, project members only. Preview: ddev 1x-user-guide; check before committing: ddev 1x-user-guide check; screenshots: ddev 1x-playwright test -c playwright.user-guide.config.ts.")
+fi
+if [ -d test/playwright/tests-examples ] || [ -f test/playwright/tests/example.spec.ts ]; then
+  TODOS+=("Delete the Playwright scaffold's demo tests (test/playwright/tests/example.spec.ts, test/playwright/tests-examples/) if they are not tracked by git.")
+fi
+if [ -z "$(find "${GUIDE}" -name '*.md' ! -name index.md -print -quit)" ]; then
+  TODOS+=("First page, with the user-guide skill: ask me which single task a user of the website should be able to do; prefer one that needs a screenshot. Write the page, add it to index.md, take the screenshot with the runner (synthetic user, test content with a fixed UUID), check it for personal data, and give me the preview link (ddev 1x-user-guide).")
+fi
+TODOS+=("Finish: ddev 1x-user-guide check must end with 'User guide OK'; git status lists only the files of this setup (.claude/settings.json is never committed). Summarise what was done, list the changed files and propose commits. Don't commit, push or open a merge request until I say so.")
+
+PROMPT="ddev 1x-user-guide-install has prepared the end-user guide in this project: the user-guide agents package, ${GUIDE}/ (site.config.json, index.md) and the Playwright screenshot runner; the guide builds. Pages URL: ${PAGES_URL}.
+
+Do the open todos below, in order. Rules: find facts yourself (repo, .ddev/config.yaml, .gitlab-ci.yml, GitLab API with glab, theme files) and ask me only for decisions, in one round where possible. State the blast radius before every step with side effects (local, remote GitLab, Pages site).
+
+Open todos:"
+for i in "${!TODOS[@]}"; do
+  PROMPT+="
+$((i + 1)). ${TODOS[$i]}"
+done
+
+echo -e "${GREEN}${#TODOS[@]} todos left for Claude Code.${NC}"
+if command -v claude > /dev/null 2>&1; then
+  echo "Starting Claude Code; answer its questions there."
+  exec claude "${PROMPT}"
+fi
+note "Claude Code is not installed. Start it in this project and paste:"
+echo -e "\n${PROMPT}\n"
