@@ -67,9 +67,14 @@ case "${1:-serve}" in
     run "${IMAGE}" gitlab-pages check /project
     ;;
   build)
-    run "${IMAGE}" gitlab-pages build /project /project/public
-    # Hand public/ back to the host user; on Linux it is root-owned otherwise.
-    run --entrypoint chown "${IMAGE}" -R "$(id -u):$(id -g)" /project/public
+    BUILD_RC=0
+    run "${IMAGE}" gitlab-pages build /project /project/public || BUILD_RC=$?
+    # Hand public/ back to the host user, also after a failed build; on Linux it is root-owned otherwise.
+    # Not on rootless docker: container root already is the host user there, and chown would map to a sub-uid.
+    if [ -d "${DDEV_APPROOT}/public" ] && ! docker info --format '{{.SecurityOptions}}' 2>/dev/null | grep -q rootless; then
+      run --entrypoint chown "${IMAGE}" -R "$(id -u):$(id -g)" /project/public || true
+    fi
+    exit "${BUILD_RC}"
     ;;
   *)
     sed -n '4,6p' "$0"

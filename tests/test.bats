@@ -126,3 +126,36 @@ teardown() {
     [ "$status" -ne 0 ]
     [[ "$output" == *"ddev 1x-user-guide-install prepare"* ]]
 }
+
+@test "1x-user-guide without jq on the host" {
+  set -eu -o pipefail
+  cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
+  ddev get ${DIR}
+  # jq runs in a docker image then and cannot read local files: no file arguments, only stdin and --arg/--argjson.
+  run grep -nE -- '--(rawfile|slurpfile)' .ddev/commands/host/1x-user-guide-install
+    [ "$status" -ne 0 ]
+  # A PATH with everything except jq.
+  NOJQ="$(mktemp -d)"
+  IFS=: read -ra dirs <<< "${PATH}"
+  for d in "${dirs[@]}"; do
+    for f in "${d}"/*; do
+      [ -e "${f}" ] || continue
+      n="$(basename "${f}")"
+      if [ "${n}" != jq ] && [ ! -e "${NOJQ}/${n}" ]; then ln -s "${f}" "${NOJQ}/${n}"; fi
+    done
+  done
+  run env PATH="${NOJQ}" bash -c 'command -v jq'
+    [ "$status" -ne 0 ]
+  git init -q . && git remote add origin git@git.1xinternet.de:group/project.git
+  mkdir -p docs/user-guide
+  echo '{"url":"https://group.pages.1xinternet.de/project/"}' > docs/user-guide/site.config.json
+  run env PATH="${NOJQ}" bash -c 'echo "{\"version\":1,\"publish\":\"tags\",\"sites\":[{\"name\":\"Prod\",\"url\":\"https://www.example.com\"}]}" | ddev 1x-user-guide-install store'
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Pull complete"* ]]
+    [ -f docs/user-guide/setup.json ]
+  run env PATH="${NOJQ}" bash -c 'ddev 1x-user-guide-install apply --dry-run < /dev/null'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"gitlab-pages.yml"* ]]
+    [[ "$output" == *"https://www.example.com"* ]]
+  rm -rf "${NOJQ}"
+}

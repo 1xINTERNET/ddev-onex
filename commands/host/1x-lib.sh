@@ -83,6 +83,9 @@ jq_compat() {
   if command -v jq >/dev/null 2>&1; then
     jq "$@"
   elif command -v docker >/dev/null 2>&1; then
+    # Pull quietly first: docker's "Pulling image..." output would otherwise end up in the result.
+    docker image inspect ghcr.io/jqlang/jq >/dev/null 2>&1 || docker pull -q ghcr.io/jqlang/jq >/dev/null 2>&1 || true
+    # The container sees no local files: pass data on stdin or as --arg/--argjson, never as file arguments.
     docker run --rm -i ghcr.io/jqlang/jq "$@"
   else
     echo "Error: jq not found and docker is not available. Please install jq or docker." >&2

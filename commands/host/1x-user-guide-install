@@ -65,7 +65,7 @@ validate() { # validate < json -> prints errors, one per line
     [
       (if .version != 1 then "version must be 1" else empty end),
       (if ((.publish // "") | test("^(tags|branch:[^ ]+)$")) then empty else "publish must be \"tags\" or \"branch:<name>\"" end),
-      (if ((.pages // "own") | IN("own", "existing")) then empty else "pages must be \"own\" or \"existing\"" end),
+      (if ((.pages // "own") | . == "own" or . == "existing") then empty else "pages must be \"own\" or \"existing\"" end),
       ((.sites // [])[] | select(((.name // "") | type != "string" or . == "") or ((.url // "") | url | not)) | "invalid site (needs name and http(s) url): \(tojson)"),
       (if (.branding.accent // "#000") | test("^#[0-9a-fA-F]{3,8}$") then empty else "branding.accent must be a hex colour like #e30613" end),
       ((.branding.logo, .branding.favicon) | select(. != null) | select(relpath | not) | "branding paths must be relative to the project root and not contain ..: \(.)")
@@ -331,7 +331,7 @@ if [ -n "${PROJECT_ID}" ]; then
   # For tags there is no branch to lint: use the current branch, or the project's default branch.
   REF="${BRANCH:-$(git symbolic-ref --short -q HEAD || true)}"
   [ -n "${REF}" ] || REF="$(glab api "projects/${PROJECT_ID}" 2> /dev/null | jq_compat -r '.default_branch // "main"' || echo main)"
-  LINT="$(jq_compat -n --rawfile c "${NEW_CI}" --arg ref "${REF}" '{content: $c, dry_run: true, include_jobs: true, ref: $ref}' \
+  LINT="$(jq_compat -n --arg c "$(cat "${NEW_CI}")" --arg ref "${REF}" '{content: $c, dry_run: true, include_jobs: true, ref: $ref}' \
     | glab api -X POST "projects/${PROJECT_ID}/ci/lint" -H "Content-Type: application/json" --input - 2> /dev/null || true)"
   # An empty pipeline comes back as invalid ("would have been empty"); that is the case the override is for.
   LINT_EMPTY="$(echo "${LINT:-}" | jq_compat -r '(.errors // []) | map(select(test("would have been empty"))) | length' 2> /dev/null || echo 0)"
@@ -363,8 +363,8 @@ done
 
 step "2/3 ${SITE}"
 # Local stays first; Stage, Prod and the like come from the facts. Branding keys are only set when given.
-jq_compat --slurpfile f "${FACTS}" '
-  ($f[0]) as $facts
+jq_compat --argjson f "$(cat "${FACTS}")" '
+  ($f) as $facts
   | (if $facts.sites then .sites = ((.sites // [] | map(select(.name == "Local"))) + $facts.sites) else . end)
   | (if $facts.branding.title then .title = $facts.branding.title else . end)
   | (if $facts.branding.logo then .logo = "assets/" + ($facts.branding.logo | split("/") | last) else . end)
