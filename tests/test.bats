@@ -70,3 +70,13 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "/mnt/pax/kubeconfig" ]
 }
+
+@test "upgrade replaces a 1x-lib.sh from before 0.1.10" {
+  set -eu -o pipefail
+  cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
+  mkdir -p .ddev/commands/host
+  printf '#!/usr/bin/env bash\n# 1x-lib.sh without the ddev-generated marker.\n' > .ddev/commands/host/1x-lib.sh
+  ddev get ${DIR}
+  run grep -c "jq_compat()" .ddev/commands/host/1x-lib.sh
+    [ "$status" -eq 0 ]
+}

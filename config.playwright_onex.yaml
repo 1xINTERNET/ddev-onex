@@ -1,0 +1,26 @@
+#ddev-generated
+# Removes the private @dxp/* and @1xinternet/* packages from the files that
+# lullabot/ddev-playwright stages for the web image build. The build has no npm
+# token, so installing them fails with a 404 (#65). Only the staged copies in
+# .ddev/web-build/playwright change, test/playwright stays as it is.
+# The file name sorts after config.playwright.yml, so this runs after staging.
+hooks:
+  pre-start:
+    - exec-host: |
+        staged=.ddev/web-build/playwright
+        if [ -f "$staged/package.json" ]; then
+          source .ddev/commands/host/1x-lib.sh
+          jq_compat 'def strip: with_entries(select(.key | test("^@(dxp|1xinternet)/") | not));
+            if .devDependencies then .devDependencies |= strip else . end |
+            if .dependencies then .dependencies |= strip else . end' \
+            < "$staged/package.json" > "$staged/package.json.tmp" \
+            && mv "$staged/package.json.tmp" "$staged/package.json" || exit 1
+          if [ -f "$staged/package-lock.json" ]; then
+            jq_compat 'def strip: with_entries(select(.key | test("^@(dxp|1xinternet)/") | not));
+              .packages |= with_entries(select(.key | test("node_modules/@(dxp|1xinternet)/") | not)) |
+              .packages[""] |= (if .devDependencies then .devDependencies |= strip else . end |
+                if .dependencies then .dependencies |= strip else . end)' \
+              < "$staged/package-lock.json" > "$staged/package-lock.json.tmp" \
+              && mv "$staged/package-lock.json.tmp" "$staged/package-lock.json" || exit 1
+          fi
+        fi
