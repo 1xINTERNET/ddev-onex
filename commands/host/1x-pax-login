@@ -47,7 +47,7 @@ fi
 rm -rf "$dir"/pax-* "$dir/cache"/*
 echo "Signing in to the 1pax platform with the company Google account."
 echo "If a link appears, open it, sign in, and paste the code you get afterwards."
-ddev exec sh -c 'kubectl-oidc_login get-token --oidc-issuer-url=https://keycloak.backbone.pax.1xinter.net/realms/pax --oidc-client-id=kubernetes --grant-type=authcode-keyboard --oidc-redirect-url=urn:ietf:wg:oauth:2.0:oob --token-cache-dir=/mnt/pax/cache >/dev/null'
+ddev exec sh -c 'kubectl-oidc_login get-token --oidc-issuer-url=https://login.1xinternet.de/realms/1xinternet --oidc-client-id=kubernetes --grant-type=authcode-keyboard --oidc-redirect-url=urn:ietf:wg:oauth:2.0:oob --token-cache-dir=/mnt/pax/cache >/dev/null'
 user=""
 access=""
 failed=0

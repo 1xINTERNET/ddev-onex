@@ -4,7 +4,7 @@ set -euo pipefail
 provider=${PAX_WORKFORCE_PROVIDER:-//iam.googleapis.com/locations/global/workforcePools/pax-platform/providers/kubernetes}
 project=${PAX_GCP_PROJECT_NUMBER:-548392726325}
 cache_base=${PAX_GKE_TOKEN_CACHE:-${HOME}/.kube/cache/pax-gke-token.json}
-id_token=$(kubectl-oidc_login get-token --oidc-issuer-url=https://keycloak.backbone.pax.1xinter.net/realms/pax --oidc-client-id=kubernetes "$@" | jq -r .status.token)
+id_token=$(kubectl-oidc_login get-token --oidc-issuer-url=https://login.1xinternet.de/realms/1xinternet --oidc-client-id=kubernetes "$@" | jq -r .status.token)
 [ -n "$id_token" ] && [ "$id_token" != null ] || { echo "no identity token from kubelogin" >&2; exit 1; }
 subject=$(printf '%s' "${id_token#*.}" | cut -d. -f1 | tr '_-' '/+' | { p=$(cat); printf '%s%s' "$p" "$(printf '%*s' $(( (4 - ${#p} % 4) % 4 )) '' | tr ' ' '=')"; } | base64 -d 2>/dev/null | jq -r '.sub // empty')
 [ -n "$subject" ] || { echo "identity token carries no subject" >&2; exit 1; }
